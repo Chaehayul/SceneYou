@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!assets/|events/|vite.svg).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
