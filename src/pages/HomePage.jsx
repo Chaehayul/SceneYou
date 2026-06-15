@@ -41,36 +41,40 @@ export default function HomePage() {
         <section className="hero">
           <img className="hero-bg" src={imageUrl(featured.backdrop_path, "original")} alt="" />
           <div className="hero-shade" />
-          <div className="container hero-content">
-            <span className="eyebrow">SCENE OF THE WEEK</span>
-            <h1>{featured.title}</h1>
-            <div className="hero-meta">
-              <span className="score">★ {movieScore(featured.vote_average)}</span>
-              <span>{movieYear(featured.release_date)}</span>
-              <span>이번 주 인기 1위</span>
-            </div>
-            <p>{featured.overview || "지금 가장 주목받는 영화의 새로운 장면을 만나보세요."}</p>
-            <div className="hero-actions">
-              <Link className="btn btn-primary" to={`/movies/${featured.id}`}>
-                <Play size={17} fill="currentColor" /> 상세 정보
-              </Link>
-              <button
-                className="btn btn-glass"
-                onClick={() => setHeroSaved(toggleCollection(normalizeMovie(featured)))}
-                type="button"
-              >
-                <Heart size={17} fill={heroSaved ? "currentColor" : "none"} />
-                {heroSaved ? "저장됨" : "컬렉션 저장"}
-              </button>
+          <div className="container">
+            <div className="hero-content">
+              <span className="eyebrow">SCENE OF THE WEEK</span>
+              <h1>{featured.title}</h1>
+              <div className="hero-meta">
+                <span className="score">★ {movieScore(featured.vote_average)}</span>
+                <span>{movieYear(featured.release_date)}</span>
+                <span>이번 주 인기 1위</span>
+              </div>
+              <p>{featured.overview || "지금 가장 주목받는 영화의 새로운 장면을 만나보세요."}</p>
+              <div className="hero-actions">
+                <Link className="btn btn-primary" to={`/movies/${featured.id}`}>
+                  <Play size={17} fill="currentColor" /> 상세 정보
+                </Link>
+                <button
+                  className="btn btn-glass"
+                  onClick={() => setHeroSaved(toggleCollection(normalizeMovie(featured)))}
+                  type="button"
+                >
+                  <Heart size={17} fill={heroSaved ? "currentColor" : "none"} />
+                  {heroSaved ? "저장됨" : "컬렉션 저장"}
+                </button>
+              </div>
             </div>
           </div>
         </section>
       ) : (
         <section className="hero hero-placeholder">
-          <div className="container hero-content">
-            <span className="eyebrow">SCENE OF THE WEEK</span>
-            <h1>오늘의 장면을<br />발견하세요.</h1>
-            <p>영화 취향을 기록할수록 더 선명한 나만의 큐레이션이 완성됩니다.</p>
+          <div className="container">
+            <div className="hero-content">
+              <span className="eyebrow">SCENE OF THE WEEK</span>
+              <h1>오늘의 장면을<br />발견하세요.</h1>
+              <p>영화 취향을 기록할수록 더 선명한 나만의 큐레이션이 완성됩니다.</p>
+            </div>
           </div>
         </section>
       )}
