@@ -8,6 +8,7 @@ import MovieDetailPage from "./pages/MovieDetailPage";
 import MoviesPage from "./pages/MoviesPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TastePage from "./pages/TastePage";
+import CommunityPage from "./pages/CommunityPage";
 
 const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { path: "/movies", element: <MoviesPage /> },
       { path: "/movies/:movieId", element: <MovieDetailPage /> },
       { path: "/collection", element: <CollectionPage /> },
+      { path: "/community", element: <CommunityPage /> },
       { path: "/events", element: <EventsPage /> },
       { path: "/taste", element: <TastePage /> },
       { path: "/login", element: <LoginPage /> },

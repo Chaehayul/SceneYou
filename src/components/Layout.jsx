@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Film, Heart, Menu, Search, Sparkles, Ticket, X } from "lucide-react";
+import { Film, Heart, Menu, MessageCircle, Search, Sparkles, Ticket, X } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getCollection, getUser, signOut } from "../lib/storage";
 
 const links = [
   { to: "/", label: "홈", end: true },
   { to: "/movies", label: "영화 탐색" },
+  { to: "/community", label: "커뮤니티" },
   { to: "/events", label: "이벤트" },
   { to: "/taste", label: "취향 분석" },
 ];
@@ -69,6 +70,9 @@ export default function Layout() {
               <Heart size={18} />
               <span>{collectionCount}</span>
             </Link>
+            <Link className="community-shortcut" to="/community" aria-label="커뮤니티">
+              <MessageCircle size={18} />
+            </Link>
 
             {user ? (
               <button className="btn btn-ghost auth-button" onClick={logout} type="button">
@@ -123,7 +127,8 @@ export default function Layout() {
           </div>
           <div className="footer-features">
             <span><Sparkles size={15} /> 취향 기반 큐레이션</span>
-            <span><Ticket size={15} /> 영화 이벤트 모아보기</span>
+            <span><MessageCircle size={15} /> 영화 커뮤니티</span>
+            <span><Ticket size={15} /> 영화 이벤트 준비 중</span>
           </div>
         </div>
         <div className="container footer-note">

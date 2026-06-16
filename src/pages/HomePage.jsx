@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Heart, Play, Search, Sparkles, Ticket } from "lucide-react";
+import { ArrowRight, Heart, MessageCircle, Play, Search, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import MovieCard from "../components/MovieCard";
 import { ErrorState, MovieGridSkeleton, SectionHeading } from "../components/UI";
@@ -91,9 +91,9 @@ export default function HomePage() {
             <div><strong>내 컬렉션</strong><p>{getCollection().length}편의 영화를 저장했어요.</p></div>
             <ArrowRight />
           </Link>
-          <Link className="quick-card" to="/events">
-            <span className="quick-icon blue"><Ticket /></span>
-            <div><strong>진행 중인 이벤트</strong><p>놓치기 아까운 영화 혜택을 확인하세요.</p></div>
+          <Link className="quick-card" to="/community">
+            <span className="quick-icon blue"><MessageCircle /></span>
+            <div><strong>커뮤니티</strong><p>별점과 감상평으로 취향을 나눠보세요.</p></div>
             <ArrowRight />
           </Link>
         </section>

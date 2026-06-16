@@ -1,6 +1,7 @@
 const COLLECTION_KEY = "sceneyou_collection";
 const RECENT_KEY = "sceneyou_recent";
 const USER_KEY = "sceneyou_user";
+const COMMUNITY_KEY = "sceneyou_community_posts";
 const LEGACY_COLLECTION_KEY = "myCollection";
 const LEGACY_USER_KEY = "loggedInUser";
 
@@ -81,4 +82,13 @@ export function getReviews(movieId) {
 
 export function saveReviews(movieId, reviews) {
   localStorage.setItem(`sceneyou_reviews_${movieId}`, JSON.stringify(reviews));
+}
+
+export function getCommunityPosts() {
+  return read(COMMUNITY_KEY, []);
+}
+
+export function saveCommunityPosts(posts) {
+  localStorage.setItem(COMMUNITY_KEY, JSON.stringify(posts));
+  window.dispatchEvent(new CustomEvent("sceneyou:community"));
 }
