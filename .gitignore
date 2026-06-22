@@ -7,7 +7,7 @@ dist
 .playwright-cli
 npm-debug.log*
 
-# Legacy source and portfolio reference files kept locally
+# Local portfolio/reference files
 SceneYou_작업물/
 SceneYou발표 ppt.pdf
 스크린샷 *.png
