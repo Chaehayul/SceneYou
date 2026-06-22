@@ -19,9 +19,14 @@ export default function Layout() {
   const [user, setUser] = useState(getUser());
 
   useEffect(() => {
-    const sync = () => setCollectionCount(getCollection().length);
-    window.addEventListener("sceneyou:collection", sync);
-    return () => window.removeEventListener("sceneyou:collection", sync);
+    const syncCollection = () => setCollectionCount(getCollection().length);
+    const syncUser = () => setUser(getUser());
+    window.addEventListener("sceneyou:collection", syncCollection);
+    window.addEventListener("sceneyou:user", syncUser);
+    return () => {
+      window.removeEventListener("sceneyou:collection", syncCollection);
+      window.removeEventListener("sceneyou:user", syncUser);
+    };
   }, []);
 
   function submitSearch(event) {
@@ -66,7 +71,7 @@ export default function Layout() {
               <button type="submit" aria-label="검색"><Search size={17} /></button>
             </form>
 
-            <Link className="collection-shortcut" to="/collection" aria-label={`내 컬렉션 ${collectionCount}편`}>
+            <Link className="collection-shortcut" to="/collection" aria-label={`내 컬렉션 ${collectionCount}개`}>
               <Heart size={18} />
               <span>{collectionCount}</span>
             </Link>
@@ -132,7 +137,7 @@ export default function Layout() {
           </div>
         </div>
         <div className="container footer-note">
-          영화 정보는 TMDB를 활용하며, SceneYou는 TMDB의 보증 또는 인증을 받지 않았습니다.
+          영화 정보는 TMDB API를 활용하며, SceneYou는 TMDB의 공식 인증 서비스가 아닙니다.
         </div>
       </footer>
     </div>

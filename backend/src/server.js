@@ -18,8 +18,20 @@ function hashPassword(password) {
   return crypto.createHash("sha256").update(String(password)).digest("hex");
 }
 
+function cleanText(value, fallback = "") {
+  return String(value || fallback).trim();
+}
+
+function normalizeTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .map((tag) => cleanText(tag).replace(/^#/, ""))
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 async function findOrCreateUser(username = "guest", password = "demo-password") {
-  const safeUsername = String(username || "guest").trim() || "guest";
+  const safeUsername = cleanText(username, "guest") || "guest";
   const existing = await prisma.user.findUnique({ where: { username: safeUsername } });
   if (existing) return existing;
   return prisma.user.create({
@@ -67,8 +79,9 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/auth/signup", async (req, res, next) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "아이디와 비밀번호를 입력해주세요." });
+    const username = cleanText(req.body.username);
+    const password = cleanText(req.body.password);
+    if (!username || !password) return res.status(400).json({ message: "아이디와 비밀번호를 입력해 주세요." });
     const exists = await prisma.user.findUnique({ where: { username } });
     if (exists) return res.status(409).json({ message: "이미 사용 중인 아이디입니다." });
     const user = await prisma.user.create({ data: { username, passwordHash: hashPassword(password) } });
@@ -80,7 +93,8 @@ app.post("/api/auth/signup", async (req, res, next) => {
 
 app.post("/api/auth/signin", async (req, res, next) => {
   try {
-    const { username, password } = req.body;
+    const username = cleanText(req.body.username);
+    const password = cleanText(req.body.password);
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user || user.passwordHash !== hashPassword(password)) {
       return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
@@ -168,14 +182,16 @@ app.get("/api/reviews/:tmdbId", async (req, res, next) => {
 app.post("/api/reviews/:tmdbId", async (req, res, next) => {
   try {
     const user = await findOrCreateUser(req.body.user);
+    const text = cleanText(req.body.text);
+    if (text.length < 5) return res.status(400).json({ message: "리뷰 내용을 5자 이상 입력해 주세요." });
     const review = await prisma.review.create({
       data: {
         userId: user.id,
         tmdbId: Number(req.params.tmdbId),
-        movieTitle: req.body.movieTitle,
-        nickname: req.body.nickname || user.username,
+        movieTitle: cleanText(req.body.movieTitle),
+        nickname: cleanText(req.body.nickname, user.username),
         rating: Number(req.body.rating),
-        text: req.body.text,
+        text,
       },
     });
     res.status(201).json({
@@ -190,13 +206,35 @@ app.post("/api/reviews/:tmdbId", async (req, res, next) => {
   }
 });
 
-app.get("/api/community/posts", async (_req, res, next) => {
+app.get("/api/community/posts", async (req, res, next) => {
   try {
+    const type = cleanText(req.query.type);
+    const keyword = cleanText(req.query.q);
+    const sort = cleanText(req.query.sort, "hot");
+    const where = {};
+    if (type && type !== "all") where.type = type;
+    if (keyword) {
+      where.OR = [
+        { movieTitle: { contains: keyword, mode: "insensitive" } },
+        { content: { contains: keyword, mode: "insensitive" } },
+        { nickname: { contains: keyword, mode: "insensitive" } },
+        { tags: { has: keyword } },
+      ];
+    }
+
     const posts = await prisma.communityPost.findMany({
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy: sort === "new" ? { createdAt: "desc" } : undefined,
       include: { comments: { orderBy: { createdAt: "asc" } }, likes: true },
+      take: 80,
     });
-    res.json(posts.map(toClientPost));
+
+    const mapped = posts.map(toClientPost).sort((a, b) => {
+      if (sort === "new") return b.createdAt - a.createdAt;
+      if (sort === "comment") return b.comments.length - a.comments.length;
+      return b.likes + b.comments.length * 2 - (a.likes + a.comments.length * 2);
+    });
+    res.json(mapped);
   } catch (error) {
     next(error);
   }
@@ -205,16 +243,21 @@ app.get("/api/community/posts", async (_req, res, next) => {
 app.post("/api/community/posts", async (req, res, next) => {
   try {
     const user = await findOrCreateUser(req.body.user);
+    const movieTitle = cleanText(req.body.movieTitle);
+    const content = cleanText(req.body.content);
+    if (!movieTitle || content.length < 10) {
+      return res.status(400).json({ message: "영화 제목과 10자 이상의 감상 내용을 입력해 주세요." });
+    }
     const post = await prisma.communityPost.create({
       data: {
         userId: user.id,
-        type: req.body.type || "review",
-        movieTitle: req.body.movieTitle,
-        nickname: req.body.nickname || user.username,
+        type: cleanText(req.body.type, "review"),
+        movieTitle,
+        nickname: cleanText(req.body.nickname, user.username),
         rating: Number(req.body.rating || 0),
-        content: req.body.content,
+        content,
         spoiler: Boolean(req.body.spoiler),
-        tags: req.body.tags || [],
+        tags: normalizeTags(req.body.tags),
       },
       include: { comments: true, likes: true },
     });
@@ -242,12 +285,14 @@ app.post("/api/community/posts/:postId/like", async (req, res, next) => {
 app.post("/api/community/posts/:postId/comments", async (req, res, next) => {
   try {
     const user = await findOrCreateUser(req.body.user);
+    const content = cleanText(req.body.content);
+    if (!content) return res.status(400).json({ message: "댓글 내용을 입력해 주세요." });
     const comment = await prisma.communityComment.create({
       data: {
         postId: req.params.postId,
         userId: user.id,
-        nickname: req.body.nickname || user.username,
-        content: req.body.content,
+        nickname: cleanText(req.body.nickname, user.username),
+        content,
       },
     });
     res.status(201).json({

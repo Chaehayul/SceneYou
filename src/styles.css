@@ -375,6 +375,28 @@ select { cursor: pointer; }
 .community-stat-card svg { color: var(--brand-light); }
 .community-stat-card strong { font-size: 54px; line-height: 1; letter-spacing: -0.06em; }
 .community-stat-card span { color: var(--muted); font-size: 13px; }
+.community-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 24px;
+}
+.community-metrics > div {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.community-metrics strong { font-size: 28px; letter-spacing: -0.04em; }
+.community-metrics span { color: var(--muted); font-size: 13px; font-weight: 800; }
+.api-chip.online { color: var(--success); border-color: rgba(84, 217, 161, 0.2); background: rgba(84, 217, 161, 0.06); }
+.api-chip.checking { color: #ffd166; }
+.api-chip.offline, .api-chip.local { color: var(--muted); }
 .community-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 310px;
@@ -411,6 +433,12 @@ select { cursor: pointer; }
   width: fit-content;
 }
 .spoiler-check input { min-height: auto; }
+.compose-message {
+  margin: -2px 0 0;
+  color: #ffc0ac;
+  font-size: 13px;
+  font-weight: 800;
+}
 .community-tags { display: flex; flex-wrap: wrap; gap: 9px; }
 .community-tags button, .post-tags button {
   display: inline-flex;
@@ -505,6 +533,12 @@ select { cursor: pointer; }
   font-size: 12px;
   font-weight: 800;
 }
+.spoiler-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
 .post-card > p { color: #d5d5dd; line-height: 1.75; }
 .post-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
 .post-actions {
@@ -586,6 +620,7 @@ select { cursor: pointer; }
   .quick-grid { grid-template-columns: 1fr; }
   .detail-columns { grid-template-columns: 1fr; }
   .community-layout { grid-template-columns: 1fr; }
+  .community-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .feed-toolbar { grid-template-columns: 1fr; }
   .featured-events, .event-grid { grid-template-columns: 1fr; }
   .auth-page { grid-template-columns: 1fr; }
@@ -641,6 +676,7 @@ select { cursor: pointer; }
   .live-status time { display: none; }
   .community-hero { grid-template-columns: 1fr; padding: 28px; }
   .community-stat-card { min-height: 130px; }
+  .community-metrics { grid-template-columns: 1fr; }
   .compose-bottom, .comment-form { align-items: stretch; flex-direction: column; }
   .post-card { padding: 19px; }
   .post-head { align-items: flex-start; flex-direction: column; }

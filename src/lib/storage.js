@@ -62,11 +62,16 @@ export function getUser() {
   return localStorage.getItem(USER_KEY) || localStorage.getItem(LEGACY_USER_KEY) || "";
 }
 
+export function setCurrentUser(id) {
+  localStorage.setItem(USER_KEY, id);
+  window.dispatchEvent(new CustomEvent("sceneyou:user"));
+}
+
 export function signIn(id, password) {
   const stored = localStorage.getItem(`sceneyou_account_${id}`) ?? localStorage.getItem(id);
   if (stored === null) return { ok: false, message: "등록되지 않은 아이디입니다." };
   if (stored !== password) return { ok: false, message: "비밀번호가 일치하지 않습니다." };
-  localStorage.setItem(USER_KEY, id);
+  setCurrentUser(id);
   return { ok: true };
 }
 
@@ -81,6 +86,7 @@ export function signUp(id, password) {
 export function signOut() {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(LEGACY_USER_KEY);
+  window.dispatchEvent(new CustomEvent("sceneyou:user"));
 }
 
 export function getReviews(movieId) {

@@ -4,6 +4,17 @@ export function hasApi() {
   return Boolean(API_URL);
 }
 
+function withParams(path, params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "" && value !== "all") {
+      search.set(key, value);
+    }
+  });
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 async function request(path, options = {}) {
   if (!API_URL) throw new Error("API URL is not configured.");
   const response = await fetch(`${API_URL}${path}`, {
@@ -41,7 +52,7 @@ export const api = {
     method: "POST",
     body: JSON.stringify(payload),
   }),
-  getCommunityPosts: () => request("/api/community/posts"),
+  getCommunityPosts: (params) => request(withParams("/api/community/posts", params)),
   createCommunityPost: (payload) => request("/api/community/posts", {
     method: "POST",
     body: JSON.stringify(payload),
