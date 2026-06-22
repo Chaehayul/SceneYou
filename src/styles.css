@@ -889,6 +889,31 @@ select { cursor: pointer; }
 .auth-form label { margin-bottom: 15px; }
 .auth-form input { min-height: 50px; }
 .auth-form > .btn { width: 100%; min-height: 50px; }
+.demo-account-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 15px;
+  border: 1px solid rgba(255, 95, 61, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 95, 61, 0.08);
+}
+.demo-account-box strong { display: block; margin-bottom: 4px; font-size: 13px; }
+.demo-account-box p { margin: 0; color: #ffc0ac; font-size: 12px; font-weight: 800; }
+.demo-account-box button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 95, 61, 0.26);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.demo-account-box button:hover { border-color: var(--brand); }
 .auth-form .btn:disabled { cursor: progress; opacity: 0.72; transform: none; }
 .password-field {
   position: relative;

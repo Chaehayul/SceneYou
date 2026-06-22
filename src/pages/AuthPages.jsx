@@ -1,22 +1,23 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, Eye, EyeOff, Film, LoaderCircle, LockKeyhole, Sparkles } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { api, hasApi } from "../lib/api";
 import { getUser, setCurrentUser, signIn, signUp } from "../lib/storage";
 
+const DEMO_ACCOUNT = { id: "demo", password: "demo123" };
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 
 function getPasswordLevel(password) {
-  const checks = [
+  return [
     password.length >= 6,
     /[a-zA-Z]/.test(password),
     /[0-9]/.test(password),
-  ];
-  return checks.filter(Boolean).length;
+  ].filter(Boolean).length;
 }
 
 function AuthShell({ type }) {
   const navigate = useNavigate();
+  const formRef = useRef(null);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,15 @@ function AuthShell({ type }) {
   const passwordLevel = useMemo(() => getPasswordLevel(password), [password]);
 
   if (getUser()) return <Navigate replace to="/" />;
+
+  function fillDemoAccount() {
+    if (!formRef.current) return;
+    formRef.current.elements.id.value = DEMO_ACCOUNT.id;
+    formRef.current.elements.password.value = DEMO_ACCOUNT.password;
+    setPassword(DEMO_ACCOUNT.password);
+    setSuccess(false);
+    setMessage("체험 계정이 입력됐어요. 로그인 버튼을 눌러주세요.");
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -79,16 +89,26 @@ function AuthShell({ type }) {
         <div className="auth-visual-copy">
           <span className="eyebrow"><Sparkles size={14} /> {login ? "WELCOME BACK" : "START YOUR SCENE"}</span>
           <h1>{login ? <>다시 만나는<br />나의 영화 기록.</> : <>좋아하는 영화가<br />취향이 되는 곳.</>}</h1>
-          <p>{login ? "저장한 영화와 남긴 리뷰, 커뮤니티 활동을 이어서 만나보세요." : "컬렉션, 리뷰, 커뮤니티 활동을 SceneYou 계정으로 관리해보세요."}</p>
+          <p>{login ? "저장한 영화와 리뷰, 커뮤니티 활동을 이어서 확인해보세요." : "컬렉션, 리뷰, 커뮤니티 활동을 SceneYou 계정으로 관리해보세요."}</p>
         </div>
       </section>
 
       <section className="auth-form-wrap">
-        <form className="auth-form" onSubmit={submit}>
+        <form className="auth-form" onSubmit={submit} ref={formRef}>
           <span className="auth-symbol"><LockKeyhole /></span>
           <span className="eyebrow">{login ? "SIGN IN" : "CREATE ACCOUNT"}</span>
           <h2>{login ? "로그인" : "회원가입"}</h2>
           <p>{login ? "SceneYou 계정으로 나의 영화 취향을 이어가세요." : "간단한 정보로 계정을 만들고 영화 취향을 기록하세요."}</p>
+
+          {login && (
+            <div className="demo-account-box">
+              <div>
+                <strong>빠른 체험용 계정</strong>
+                <p>ID: {DEMO_ACCOUNT.id} · PW: {DEMO_ACCOUNT.password}</p>
+              </div>
+              <button onClick={fillDemoAccount} type="button">체험 계정 입력</button>
+            </div>
+          )}
 
           <label>
             아이디
