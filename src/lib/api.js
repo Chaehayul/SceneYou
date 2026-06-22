@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 export function hasApi() {
   return Boolean(API_URL);
@@ -17,10 +17,17 @@ function withParams(path, params = {}) {
 
 async function request(path, options = {}) {
   if (!API_URL) throw new Error("API URL is not configured.");
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
+
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+  } catch {
+    throw new Error("API 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || "API 요청에 실패했습니다.");

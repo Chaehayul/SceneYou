@@ -8,10 +8,32 @@ import { PrismaClient } from "@prisma/client";
 const app = express();
 const prisma = new PrismaClient();
 const port = Number(process.env.PORT || 8787);
-const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const clientOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
 const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
 
-app.use(cors({ origin: [clientOrigin, "http://localhost:4173"], credentials: true }));
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  const normalized = origin.replace(/\/+$/, "");
+  return (
+    clientOrigins.includes(normalized)
+    || normalized === "http://localhost:5173"
+    || normalized === "http://localhost:4173"
+    || normalized === "http://127.0.0.1:5173"
+    || normalized === "http://127.0.0.1:4173"
+    || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalized)
+  );
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
