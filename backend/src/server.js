@@ -9,6 +9,7 @@ const app = express();
 const prisma = new PrismaClient();
 const port = Number(process.env.PORT || 8787);
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
 
 app.use(cors({ origin: [clientOrigin, "http://localhost:4173"], credentials: true }));
 app.use(express.json({ limit: "1mb" }));
@@ -98,6 +99,10 @@ app.post("/api/auth/signup", async (req, res, next) => {
     const username = cleanText(req.body.username);
     const password = cleanText(req.body.password);
     if (!username || !password) return res.status(400).json({ message: "아이디와 비밀번호를 입력해 주세요." });
+    if (!usernamePattern.test(username)) {
+      return res.status(400).json({ message: "아이디는 영문, 숫자, 밑줄(_) 조합으로 3~20자까지 입력해 주세요." });
+    }
+    if (password.length < 6) return res.status(400).json({ message: "비밀번호는 6자 이상 입력해 주세요." });
     const exists = await prisma.user.findUnique({ where: { username } });
     if (exists) return res.status(409).json({ message: "이미 사용 중인 아이디입니다." });
     const user = await prisma.user.create({ data: { username, passwordHash: hashPassword(password) } });
@@ -111,6 +116,9 @@ app.post("/api/auth/signin", async (req, res, next) => {
   try {
     const username = cleanText(req.body.username);
     const password = cleanText(req.body.password);
+    if (!usernamePattern.test(username) || password.length < 6) {
+      return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
+    }
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user || user.passwordHash !== hashPassword(password)) {
       return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });

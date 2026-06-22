@@ -1,42 +1,75 @@
-import { useState } from "react";
-import { Film, LockKeyhole, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CheckCircle2, Eye, EyeOff, Film, LoaderCircle, LockKeyhole, Sparkles } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { api, hasApi } from "../lib/api";
 import { getUser, setCurrentUser, signIn, signUp } from "../lib/storage";
+
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
+
+function getPasswordLevel(password) {
+  const checks = [
+    password.length >= 6,
+    /[a-zA-Z]/.test(password),
+    /[0-9]/.test(password),
+  ];
+  return checks.filter(Boolean).length;
+}
 
 function AuthShell({ type }) {
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
   const login = type === "login";
+  const passwordLevel = useMemo(() => getPasswordLevel(password), [password]);
 
   if (getUser()) return <Navigate replace to="/" />;
 
   async function submit(event) {
     event.preventDefault();
+    if (loading) return;
+
     const form = new FormData(event.currentTarget);
     const id = String(form.get("id") || "").trim();
-    const password = String(form.get("password") || "");
+    const currentPassword = String(form.get("password") || "");
+    const confirmPassword = String(form.get("confirm") || "");
 
-    if (id.length < 3) return setMessage("아이디는 3자 이상 입력해 주세요.");
-    if (password.length < 6) return setMessage("비밀번호는 6자 이상 입력해 주세요.");
-    if (!login && password !== form.get("confirm")) return setMessage("비밀번호가 서로 일치하지 않습니다.");
+    setSuccess(false);
+    setMessage("");
 
-    let result = login ? signIn(id, password) : signUp(id, password);
-    if (hasApi()) {
-      try {
-        await (login ? api.signIn(id, password) : api.signUp(id, password));
-        if (login) setCurrentUser(id);
-        result = { ok: true };
-      } catch (error) {
-        result = { ok: false, message: error.message };
-      }
+    if (!USERNAME_PATTERN.test(id)) {
+      setMessage("아이디는 영문, 숫자, 밑줄(_) 조합으로 3~20자까지 입력해 주세요.");
+      return;
+    }
+    if (currentPassword.length < 6) {
+      setMessage("비밀번호는 6자 이상 입력해 주세요.");
+      return;
+    }
+    if (!login && currentPassword !== confirmPassword) {
+      setMessage("비밀번호가 서로 일치하지 않습니다.");
+      return;
     }
 
-    if (!result.ok) return setMessage(result.message);
-    setSuccess(true);
-    setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다.");
-    setTimeout(() => navigate(login ? "/" : "/login"), 700);
+    setLoading(true);
+    try {
+      if (hasApi()) {
+        await (login ? api.signIn(id, currentPassword) : api.signUp(id, currentPassword));
+        if (login) setCurrentUser(id);
+      } else {
+        const result = login ? signIn(id, currentPassword) : signUp(id, currentPassword);
+        if (!result.ok) throw new Error(result.message);
+      }
+
+      setSuccess(true);
+      setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다. 로그인 화면으로 이동합니다.");
+      setTimeout(() => navigate(login ? "/" : "/login"), 750);
+    } catch (error) {
+      setMessage(error.message || "요청 처리 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -46,20 +79,78 @@ function AuthShell({ type }) {
         <div className="auth-visual-copy">
           <span className="eyebrow"><Sparkles size={14} /> {login ? "WELCOME BACK" : "START YOUR SCENE"}</span>
           <h1>{login ? <>다시 만나는<br />나의 영화 기록.</> : <>좋아하는 영화가<br />취향이 되는 곳.</>}</h1>
-          <p>{login ? "저장한 영화와 남긴 리뷰를 이어서 만나보세요." : "발견하고, 저장하고, 나만의 감상을 기록하세요."}</p>
+          <p>{login ? "저장한 영화와 남긴 리뷰, 커뮤니티 활동을 이어서 만나보세요." : "컬렉션, 리뷰, 커뮤니티 활동을 SceneYou 계정으로 관리해보세요."}</p>
         </div>
       </section>
+
       <section className="auth-form-wrap">
         <form className="auth-form" onSubmit={submit}>
           <span className="auth-symbol"><LockKeyhole /></span>
           <span className="eyebrow">{login ? "SIGN IN" : "CREATE ACCOUNT"}</span>
-          <h2>{login ? "다시 만나 반가워요" : "SceneYou 시작하기"}</h2>
-          <p>{login ? "SceneYou 계정으로 로그인하세요." : "간단한 정보로 계정을 만들어보세요."}</p>
-          <label>아이디<input autoComplete="username" maxLength="20" minLength="3" name="id" placeholder="3자 이상 입력하세요" required /></label>
-          <label>비밀번호<input autoComplete={login ? "current-password" : "new-password"} minLength="6" name="password" placeholder="6자 이상 입력하세요" required type="password" /></label>
-          {!login && <label>비밀번호 확인<input autoComplete="new-password" minLength="6" name="confirm" placeholder="한 번 더 입력하세요" required type="password" /></label>}
+          <h2>{login ? "로그인" : "회원가입"}</h2>
+          <p>{login ? "SceneYou 계정으로 나의 영화 취향을 이어가세요." : "간단한 정보로 계정을 만들고 영화 취향을 기록하세요."}</p>
+
+          <label>
+            아이디
+            <input
+              autoComplete="username"
+              maxLength="20"
+              minLength="3"
+              name="id"
+              placeholder="영문, 숫자 3자 이상"
+              required
+            />
+          </label>
+
+          <label>
+            비밀번호
+            <span className="password-field">
+              <input
+                autoComplete={login ? "current-password" : "new-password"}
+                minLength="6"
+                name="password"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="6자 이상 입력"
+                required
+                type={showPassword ? "text" : "password"}
+              />
+              <button onClick={() => setShowPassword((current) => !current)} type="button" aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </span>
+          </label>
+
+          {!login && (
+            <>
+              <div className={`password-strength level-${passwordLevel}`}>
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="auth-checklist">
+                <span className={password.length >= 6 ? "active" : ""}><CheckCircle2 size={14} /> 6자 이상</span>
+                <span className={/[a-zA-Z]/.test(password) ? "active" : ""}><CheckCircle2 size={14} /> 영문 포함</span>
+                <span className={/[0-9]/.test(password) ? "active" : ""}><CheckCircle2 size={14} /> 숫자 포함</span>
+              </div>
+              <label>
+                비밀번호 확인
+                <input
+                  autoComplete="new-password"
+                  minLength="6"
+                  name="confirm"
+                  placeholder="한 번 더 입력"
+                  required
+                  type={showPassword ? "text" : "password"}
+                />
+              </label>
+            </>
+          )}
+
           <div className={`form-message ${success ? "success" : ""}`} role="alert">{message}</div>
-          <button className="btn btn-primary" type="submit">{login ? "로그인" : "회원가입"}</button>
+          <button className="btn btn-primary" disabled={loading} type="submit">
+            {loading && <LoaderCircle className="spin" size={17} />}
+            {login ? "로그인" : "회원가입"}
+          </button>
           <p className="auth-switch">
             {login ? "아직 계정이 없나요?" : "이미 계정이 있나요?"}{" "}
             <Link to={login ? "/signup" : "/login"}>{login ? "회원가입" : "로그인"}</Link>
