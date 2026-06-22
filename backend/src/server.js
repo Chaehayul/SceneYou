@@ -22,6 +22,19 @@ function cleanText(value, fallback = "") {
   return String(value || fallback).trim();
 }
 
+function normalizeType(type) {
+  if (type === "review") return "movie";
+  if (type === "talk") return "free";
+  if (["free", "movie", "recommend"].includes(type)) return type;
+  return "free";
+}
+
+function typeWhere(type) {
+  if (type === "movie") return { in: ["movie", "review"] };
+  if (type === "free") return { in: ["free", "talk"] };
+  return type;
+}
+
 function normalizeTags(tags) {
   if (!Array.isArray(tags)) return [];
   return tags
@@ -55,13 +68,16 @@ function toClientCollection(item) {
 function toClientPost(post) {
   return {
     id: post.id,
-    type: post.type,
+    type: normalizeType(post.type),
+    title: post.title || post.movieTitle,
     movieTitle: post.movieTitle,
     nickname: post.nickname,
     rating: post.rating,
     content: post.content,
     spoiler: post.spoiler,
     tags: post.tags,
+    views: post.viewCount || 0,
+    viewCount: post.viewCount || 0,
     likes: post.likes?.length || 0,
     comments: (post.comments || []).map((comment) => ({
       id: comment.id,
@@ -208,13 +224,14 @@ app.post("/api/reviews/:tmdbId", async (req, res, next) => {
 
 app.get("/api/community/posts", async (req, res, next) => {
   try {
-    const type = cleanText(req.query.type);
+    const type = normalizeType(cleanText(req.query.type, "all"));
     const keyword = cleanText(req.query.q);
-    const sort = cleanText(req.query.sort, "hot");
+    const sort = cleanText(req.query.sort, "new");
     const where = {};
-    if (type && type !== "all") where.type = type;
+    if (req.query.type && req.query.type !== "all") where.type = typeWhere(type);
     if (keyword) {
       where.OR = [
+        { title: { contains: keyword, mode: "insensitive" } },
         { movieTitle: { contains: keyword, mode: "insensitive" } },
         { content: { contains: keyword, mode: "insensitive" } },
         { nickname: { contains: keyword, mode: "insensitive" } },
@@ -226,13 +243,15 @@ app.get("/api/community/posts", async (req, res, next) => {
       where,
       orderBy: sort === "new" ? { createdAt: "desc" } : undefined,
       include: { comments: { orderBy: { createdAt: "asc" } }, likes: true },
-      take: 80,
+      take: 100,
     });
 
     const mapped = posts.map(toClientPost).sort((a, b) => {
       if (sort === "new") return b.createdAt - a.createdAt;
       if (sort === "comment") return b.comments.length - a.comments.length;
-      return b.likes + b.comments.length * 2 - (a.likes + a.comments.length * 2);
+      if (sort === "view") return b.views - a.views;
+      return b.likes * 3 + b.comments.length * 5 + Math.floor(b.views / 10)
+        - (a.likes * 3 + a.comments.length * 5 + Math.floor(a.views / 10));
     });
     res.json(mapped);
   } catch (error) {
@@ -243,21 +262,24 @@ app.get("/api/community/posts", async (req, res, next) => {
 app.post("/api/community/posts", async (req, res, next) => {
   try {
     const user = await findOrCreateUser(req.body.user);
-    const movieTitle = cleanText(req.body.movieTitle);
+    const title = cleanText(req.body.title, req.body.movieTitle);
+    const movieTitle = cleanText(req.body.movieTitle, title);
     const content = cleanText(req.body.content);
-    if (!movieTitle || content.length < 10) {
-      return res.status(400).json({ message: "영화 제목과 10자 이상의 감상 내용을 입력해 주세요." });
+    if (!title || !movieTitle || content.length < 5) {
+      return res.status(400).json({ message: "제목과 내용을 입력해 주세요." });
     }
     const post = await prisma.communityPost.create({
       data: {
         userId: user.id,
-        type: cleanText(req.body.type, "review"),
+        type: normalizeType(cleanText(req.body.type, "free")),
+        title,
         movieTitle,
         nickname: cleanText(req.body.nickname, user.username),
         rating: Number(req.body.rating || 0),
         content,
         spoiler: Boolean(req.body.spoiler),
         tags: normalizeTags(req.body.tags),
+        viewCount: Number(req.body.views || req.body.viewCount || 1),
       },
       include: { comments: true, likes: true },
     });
