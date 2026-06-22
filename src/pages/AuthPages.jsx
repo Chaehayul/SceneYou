@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Film, LockKeyhole, Sparkles } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { api, hasApi } from "../lib/api";
 import { getUser, signIn, signUp } from "../lib/storage";
 
 function AuthShell({ type }) {
@@ -11,7 +12,7 @@ function AuthShell({ type }) {
 
   if (getUser()) return <Navigate replace to="/" />;
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const id = form.get("id").trim();
@@ -19,7 +20,15 @@ function AuthShell({ type }) {
     if (id.length < 3) return setMessage("아이디는 3자 이상 입력해주세요.");
     if (password.length < 6) return setMessage("비밀번호는 6자 이상 입력해주세요.");
     if (!login && password !== form.get("confirm")) return setMessage("비밀번호가 서로 일치하지 않습니다.");
-    const result = login ? signIn(id, password) : signUp(id, password);
+    let result = login ? signIn(id, password) : signUp(id, password);
+    if (hasApi()) {
+      try {
+        await (login ? api.signIn(id, password) : api.signUp(id, password));
+        result = { ok: true };
+      } catch (error) {
+        result = { ok: false, message: error.message };
+      }
+    }
     if (!result.ok) return setMessage(result.message);
     setSuccess(true);
     setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다.");

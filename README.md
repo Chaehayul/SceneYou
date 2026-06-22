@@ -6,13 +6,16 @@
 
 - TMDB 기반 인기작, 개봉 예정작, 검색, 장르 필터, 정렬
 - 영화 상세 정보, OTT 제공처, 추천 영화
+- PostgreSQL API 연동 컬렉션, 리뷰, 커뮤니티 데이터
+- API 미설정 시 LocalStorage fallback
 - 로컬 컬렉션과 최근 본 영화
 - 컬렉션 기반 취향 분석
 - 리뷰 등록, 정렬, 삭제
-- 진행 중인 이벤트 필터와 외부 이벤트 API 연결
+- 영화 커뮤니티 게시글, 댓글, 좋아요, 태그
+- 이벤트 준비 중 화면
 - 반응형 UI, 로딩·오류·빈 상태
 
-로그인과 리뷰는 프론트엔드 포트폴리오 시연을 위한 LocalStorage 기반 데모입니다. 실제 서비스에서는 Supabase, Firebase 또는 자체 서버 인증으로 교체해야 합니다.
+로그인과 리뷰는 API 서버가 없을 때 LocalStorage 기반 데모 모드로 동작합니다. `VITE_API_URL`과 `DATABASE_URL`을 설정하면 PostgreSQL 기반 API 서버와 동기화됩니다.
 
 ## 로컬 실행
 
@@ -26,9 +29,35 @@ npm run dev
 ```env
 VITE_TMDB_API_KEY=TMDB_API_KEY
 VITE_EVENTS_API_URL=
+VITE_API_URL=http://localhost:8787
 ```
 
 `VITE_` 환경 변수는 브라우저 번들에 포함되므로 비밀키 저장 용도로 사용할 수 없습니다. TMDB 키에는 도메인 제한을 적용하는 것을 권장합니다.
+
+## PostgreSQL API 실행
+
+```bash
+cd backend
+npm install
+copy .env.example .env
+npm run db:generate
+npm run db:push
+npm run dev
+```
+
+`backend/.env`:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/sceneyou?schema=public"
+PORT=8787
+CLIENT_ORIGIN="http://localhost:5173"
+```
+
+프론트 `.env.local`에는 다음을 추가합니다.
+
+```env
+VITE_API_URL=http://localhost:8787
+```
 
 ## 빌드
 
@@ -56,10 +85,6 @@ Build command는 `npm run build`, Publish directory는 `dist`입니다.
 
 SPA 라우팅을 위해 Netlify 설정에서 모든 경로를 `/index.html`로 rewrite해야 합니다.
 
-## 이벤트 운영
-
-기본 데이터는 [events.json](./public/events.json)에서 관리합니다. 배포 후 코드 수정 없이 이벤트를 관리하려면 [EVENTS_SETUP.md](./docs/EVENTS_SETUP.md)의 Google Sheets 연결 방식을 사용하세요.
-
 ## 기술 스택
 
-React, Vite, React Router, Lucide React, TMDB API, LocalStorage
+React, Vite, React Router, Node.js, Express, Prisma, PostgreSQL, TMDB API, LocalStorage fallback

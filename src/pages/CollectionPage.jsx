@@ -3,7 +3,8 @@ import { Search, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import MovieCard from "../components/MovieCard";
 import { EmptyState, SectionHeading } from "../components/UI";
-import { clearCollection, getCollection } from "../lib/storage";
+import { api, hasApi } from "../lib/api";
+import { clearCollection, getCollection, getUser } from "../lib/storage";
 
 export default function CollectionPage() {
   const [collection, setCollection] = useState(getCollection);
@@ -14,6 +15,13 @@ export default function CollectionPage() {
     const sync = () => setCollection(getCollection());
     window.addEventListener("sceneyou:collection", sync);
     return () => window.removeEventListener("sceneyou:collection", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!hasApi()) return;
+    api.getCollection(getUser() || "guest")
+      .then(setCollection)
+      .catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {

@@ -3,6 +3,7 @@ import { Clock, ExternalLink, Heart, Star, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import MovieCard from "../components/MovieCard";
 import { ErrorState, LoadingState, SectionHeading } from "../components/UI";
+import { api, hasApi } from "../lib/api";
 import { imageUrl, movieScore, movieYear, normalizeMovie, tmdb } from "../lib/tmdb";
 import {
   getReviews,
@@ -44,6 +45,12 @@ export default function MovieDetailPage() {
         saveRecentlyViewed(normalizeMovie(movieData));
         setSaved(isCollected(movieData.id));
         document.title = `${movieData.title} | SceneYou`;
+        if (hasApi()) {
+          api.getReviews(movieData.id).then((remoteReviews) => {
+            setReviews(remoteReviews);
+            saveReviews(movieData.id, remoteReviews);
+          }).catch(() => {});
+        }
       })
       .catch((loadError) => {
         if (loadError.name !== "AbortError") setError(loadError.message);
@@ -71,6 +78,15 @@ export default function MovieDetailPage() {
     }, ...reviews];
     setReviews(next);
     saveReviews(movieId, next);
+    if (hasApi()) {
+      api.createReview(movieId, {
+        user: getUser() || "guest",
+        movieTitle: movie.title,
+        nickname: form.get("nickname").trim() || "익명",
+        rating,
+        text,
+      }).catch(() => {});
+    }
     event.currentTarget.reset();
   }
 

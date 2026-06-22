@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Heart, MessageCircle, Search, Send, ShieldAlert, Sparkles, Star, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SectionHeading } from "../components/UI";
+import { api, hasApi } from "../lib/api";
 import { getCommunityPosts, getUser, saveCommunityPosts } from "../lib/storage";
 
 const seedPosts = [
@@ -76,6 +77,18 @@ export default function CommunityPage() {
   const [sort, setSort] = useState("hot");
   const [commentDrafts, setCommentDrafts] = useState({});
 
+  useEffect(() => {
+    if (!hasApi()) return;
+    api.getCommunityPosts()
+      .then((remotePosts) => {
+        if (remotePosts.length) {
+          setPosts(remotePosts);
+          saveCommunityPosts(remotePosts);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const filteredPosts = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return posts
@@ -115,11 +128,17 @@ export default function CommunityPage() {
       createdAt: Date.now(),
     };
     sync([nextPost, ...posts]);
+    if (hasApi()) {
+      api.createCommunityPost({ ...nextPost, user: getUser() || nextPost.nickname })
+        .then((savedPost) => sync([savedPost, ...posts]))
+        .catch(() => {});
+    }
     event.currentTarget.reset();
   }
 
   function likePost(id) {
     sync(posts.map((post) => post.id === id ? { ...post, likes: post.likes + 1 } : post));
+    if (hasApi()) api.likeCommunityPost(id, getUser() || "guest").catch(() => {});
   }
 
   function submitComment(postId) {
@@ -129,6 +148,13 @@ export default function CommunityPage() {
       ...post,
       comments: [...post.comments, { id: crypto.randomUUID(), nickname: getUser() || "guest", content }],
     } : post));
+    if (hasApi()) {
+      api.createCommunityComment(postId, {
+        user: getUser() || "guest",
+        nickname: getUser() || "guest",
+        content,
+      }).catch(() => {});
+    }
     setCommentDrafts((current) => ({ ...current, [postId]: "" }));
   }
 

@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-  { ignores: ["dist", "SceneYou_작업물", "scripts"] },
+  { ignores: ["dist", "SceneYou_작업물", "scripts", "backend"] },
   {
     files: ["**/*.{js,jsx}"],
     languageOptions: {

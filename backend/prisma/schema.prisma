@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  username     String          @unique
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  collections  CollectionItem[]
+  reviews      Review[]
+  posts        CommunityPost[]
+  comments     CommunityComment[]
+  likes        CommunityLike[]
+}
+
+model CollectionItem {
+  id          String   @id @default(cuid())
+  userId      String
+  tmdbId      Int
+  title       String
+  posterPath  String?
+  backdropPath String?
+  releaseDate String?
+  voteAverage Float?
+  genreIds    Int[]    @default([])
+  savedAt     DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tmdbId])
+  @@index([userId, savedAt])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  tmdbId    Int
+  movieTitle String?
+  nickname  String
+  rating    Float
+  text      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tmdbId, createdAt])
+}
+
+model CommunityPost {
+  id         String             @id @default(cuid())
+  userId     String
+  type       String
+  movieTitle String
+  nickname   String
+  rating     Float
+  content    String
+  spoiler    Boolean            @default(false)
+  tags       String[]            @default([])
+  createdAt  DateTime            @default(now())
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments   CommunityComment[]
+  likes      CommunityLike[]
+
+  @@index([createdAt])
+}
+
+model CommunityComment {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String
+  nickname  String
+  content   String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+model CommunityLike {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}

@@ -1,3 +1,5 @@
+import { api, hasApi } from "./api";
+
 const COLLECTION_KEY = "sceneyou_collection";
 const RECENT_KEY = "sceneyou_recent";
 const USER_KEY = "sceneyou_user";
@@ -28,6 +30,11 @@ export function toggleCollection(movie) {
     ? collection.filter((item) => Number(item.id) !== Number(movie.id))
     : [{ ...movie, savedAt: Date.now() }, ...collection];
   localStorage.setItem(COLLECTION_KEY, JSON.stringify(next));
+  if (hasApi()) {
+    const user = getUser() || "guest";
+    const action = exists ? api.deleteCollection(user, movie.id) : api.saveCollection(user, movie);
+    action.catch(() => {});
+  }
   window.dispatchEvent(new CustomEvent("sceneyou:collection"));
   return !exists;
 }
