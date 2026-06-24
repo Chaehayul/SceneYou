@@ -851,11 +851,32 @@ select { cursor: pointer; }
   line-height: 1.6;
 }
 .write-card form { display: grid; gap: 12px; }
+.compose-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(10px);
+}
 .community-write-panel {
   margin-bottom: 28px;
   background:
     radial-gradient(circle at 92% 0%, rgba(255, 95, 61, 0.12), transparent 18rem),
     var(--surface);
+}
+.compose-modal {
+  width: min(760px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.56);
+  animation: compose-pop 0.18s ease-out;
+}
+@keyframes compose-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .write-panel-head {
   display: flex;

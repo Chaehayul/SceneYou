@@ -33,10 +33,6 @@ const legacyMockIds = new Set([
   "seed-3",
 ]);
 
-function isBrokenText(value = "") {
-  return /[�]|[媛-熙]{2,}|[?]{2,}/.test(String(value));
-}
-
 function normalizeType(type) {
   if (type === "review") return "movie";
   if (type === "talk") return "free";
@@ -69,13 +65,7 @@ function normalizePost(post, index = 0) {
 }
 
 function isValidRealPost(post) {
-  if (!post || legacyMockIds.has(post.id)) return false;
-  return !(
-    isBrokenText(post.title)
-    || isBrokenText(post.movieTitle)
-    || isBrokenText(post.content)
-    || post.tags.some(isBrokenText)
-  );
+  return post && !legacyMockIds.has(post.id) && post.title && post.content;
 }
 
 function getInitialPosts() {
@@ -125,6 +115,15 @@ export default function CommunityPage() {
       .catch(() => {});
   }, [category, query, sort]);
 
+  useEffect(() => {
+    if (!composeOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setComposeOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [composeOpen]);
+
   const filteredPosts = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return posts
@@ -170,7 +169,6 @@ export default function CommunityPage() {
       setNotice("로그인 후 글을 작성할 수 있습니다.");
       return;
     }
-
     if (!title || !content) {
       setNotice("제목과 내용을 입력해 주세요.");
       return;
@@ -197,7 +195,8 @@ export default function CommunityPage() {
     });
 
     sync([nextPost, ...posts]);
-    setNotice("게시글이 등록됐어요.");
+    setNotice("게시글이 등록되었어요.");
+    setComposeOpen(false);
     event.currentTarget.reset();
 
     if (hasApi()) {
@@ -253,14 +252,16 @@ export default function CommunityPage() {
       <SectionHeading
         eyebrow="COMMUNITY"
         title="커뮤니티"
-        description="영화와 드라마를 보고 난 뒤의 감상, 해석, 추천을 함께 나누는 공간입니다."
-        action={<button className="btn btn-primary" onClick={() => setComposeOpen((current) => !current)} type="button"><PenLine size={16} /> 글쓰기</button>}
+        description="영화를 보고 난 감상, 해석, 추천을 함께 나누는 공간입니다."
+        action={<button className="btn btn-primary" onClick={() => setComposeOpen(true)} type="button"><PenLine size={16} /> 글쓰기</button>}
       />
+
+      {notice && <p className="compose-message board-notice">{notice}</p>}
 
       <section className="community-board-toolbar">
         <label className="board-search">
           <Search size={18} />
-          <input onChange={(event) => setQuery(event.target.value)} placeholder="영화, 드라마, 게시글 검색" value={query} />
+          <input onChange={(event) => setQuery(event.target.value)} placeholder="영화, 게시글 검색" value={query} />
         </label>
         <div className="category-tabs board-tabs">
           {categories.map(([value, label]) => (
@@ -280,10 +281,10 @@ export default function CommunityPage() {
       <section className="hot-board-section">
         <div className="board-section-title">
           <span><TrendingUp size={17} /> HOT 인기글</span>
-          <p>좋아요, 댓글, 조회수를 기준으로 많이 반응한 글이에요.</p>
+          <p>좋아요, 댓글, 조회수 기준으로 반응이 많은 글이에요.</p>
         </div>
         {hotPosts.length === 0 ? (
-          <EmptyState title="아직 인기글이 없어요" description="게시글이 쌓이면 이곳에 HOT 인기글이 표시됩니다." />
+          <EmptyState title="아직 인기글이 없어요" description="게시글이 쌓이면 HOT 인기글이 표시됩니다." />
         ) : (
           <div className="hot-post-grid">
             {hotPosts.map((post, index) => (
@@ -307,34 +308,36 @@ export default function CommunityPage() {
       </section>
 
       {composeOpen && (
-      <section className="panel write-card community-write-panel" id="write-post">
-        <div className="write-panel-head">
-          <div>
-            <span className="eyebrow">WRITE</span>
-            <h3>글쓰기</h3>
-            <p>{username ? "감상, 해석, 추천하고 싶은 작품 이야기를 커뮤니티에 남겨보세요." : "로그인하면 글쓰기, 댓글, 좋아요 기능을 사용할 수 있습니다."}</p>
-          </div>
-          <div className="write-panel-actions">
-            {username ? <span className="author-chip">작성자 {displayName}</span> : <Link className="btn btn-primary" to="/login">로그인하고 참여하기</Link>}
-            <button className="text-button" onClick={() => setComposeOpen(false)} type="button"><X size={16} /> 닫기</button>
-          </div>
+        <div className="compose-modal-backdrop" role="presentation" onMouseDown={() => setComposeOpen(false)}>
+          <section className="panel write-card community-write-panel compose-modal" role="dialog" aria-modal="true" aria-labelledby="compose-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="write-panel-head">
+              <div>
+                <span className="eyebrow">WRITE</span>
+                <h3 id="compose-title">글쓰기</h3>
+                <p>{username ? "감상, 해석, 추천하고 싶은 작품 이야기를 커뮤니티에 남겨보세요." : "로그인하면 글쓰기, 댓글, 좋아요 기능을 사용할 수 있습니다."}</p>
+              </div>
+              <div className="write-panel-actions">
+                {username ? <span className="author-chip">작성자 {displayName}</span> : <Link className="btn btn-primary" to="/login">로그인하고 참여하기</Link>}
+                <button className="text-button" onClick={() => setComposeOpen(false)} type="button"><X size={16} /> 닫기</button>
+              </div>
+            </div>
+            <form onSubmit={submitPost} className={!username ? "locked-form" : ""}>
+              <label>제목<input name="title" placeholder="예: 숨은 명작 추천받아요" required disabled={!username} autoFocus={Boolean(username)} /></label>
+              <label>작품명<input name="movieTitle" placeholder="예: 인셉션" disabled={!username} /></label>
+              <div className="form-row">
+                <label>카테고리<select name="type" defaultValue="free" disabled={!username}><option value="free">자유</option><option value="movie">영화</option><option value="recommend">추천</option></select></label>
+                <label>별점<select name="rating" defaultValue="4" disabled={!username}><option value="5">5.0</option><option value="4.5">4.5</option><option value="4">4.0</option><option value="3">3.0</option><option value="0">없음</option></select></label>
+              </div>
+              <label>내용<textarea name="content" placeholder="감상, 추천 이유, 해석하고 싶은 장면을 적어주세요." required disabled={!username} /></label>
+              <label>태그<input name="tags" placeholder="예: 명작, 해석, 추천" disabled={!username} /></label>
+              <div className="compose-bottom">
+                <label className="spoiler-check"><input name="spoiler" type="checkbox" disabled={!username} /> 스포일러 포함</label>
+                <button className="btn btn-primary" type="submit" disabled={!username}>등록하기</button>
+              </div>
+              {notice && <p className="compose-message">{notice}</p>}
+            </form>
+          </section>
         </div>
-        <form onSubmit={submitPost} className={!username ? "locked-form" : ""}>
-          <label>제목<input name="title" placeholder="예: 숨은 명작 추천받아요" required disabled={!username} /></label>
-          <label>작품명<input name="movieTitle" placeholder="예: 인셉션" disabled={!username} /></label>
-          <div className="form-row">
-            <label>카테고리<select name="type" defaultValue="free" disabled={!username}><option value="free">자유</option><option value="movie">영화</option><option value="recommend">추천</option></select></label>
-            <label>별점<select name="rating" defaultValue="4" disabled={!username}><option value="5">5.0</option><option value="4.5">4.5</option><option value="4">4.0</option><option value="3">3.0</option><option value="0">없음</option></select></label>
-          </div>
-          <label>내용<textarea name="content" placeholder="감상, 추천 이유, 해석하고 싶은 장면을 적어주세요." required disabled={!username} /></label>
-          <label>태그<input name="tags" placeholder="예: 명작, 해석, 추천" disabled={!username} /></label>
-          <div className="compose-bottom">
-            <label className="spoiler-check"><input name="spoiler" type="checkbox" disabled={!username} /> 스포일러 포함</label>
-            <button className="btn btn-primary" type="submit" disabled={!username}>글쓰기</button>
-          </div>
-          {notice && <p className="compose-message">{notice}</p>}
-        </form>
-      </section>
       )}
 
       <div className="community-board-layout">
@@ -345,7 +348,7 @@ export default function CommunityPage() {
           </div>
 
           {filteredPosts.length === 0 ? (
-            <EmptyState title="게시글이 없어요" description="검색어를 바꾸거나 첫 글을 작성해 보세요." />
+            <EmptyState title="게시글이 없어요" description="검색어를 바꾸거나 첫 글을 작성해보세요." />
           ) : (
             <div className="board-post-list">
               {filteredPosts.map((post) => {
@@ -412,7 +415,7 @@ export default function CommunityPage() {
           </section>
 
           <section className="panel sidebar-card">
-            <h3>이번 주 인기 영화/드라마</h3>
+            <h3>이번 주 인기 콘텐츠</h3>
             {weeklyContents.length === 0 ? (
               <SidebarEmpty>조회 데이터가 생기면 인기 콘텐츠가 표시됩니다.</SidebarEmpty>
             ) : (
@@ -431,7 +434,7 @@ export default function CommunityPage() {
           <section className="panel sidebar-card">
             <h3>인기 리뷰</h3>
             {popularReviews.length === 0 ? (
-              <SidebarEmpty>좋아요를 받은 글이 이곳에 표시됩니다.</SidebarEmpty>
+              <SidebarEmpty>좋아요를 받은 글이 생기면 표시됩니다.</SidebarEmpty>
             ) : (
               <div className="sidebar-review-list">
                 {popularReviews.map((post) => (
@@ -443,24 +446,6 @@ export default function CommunityPage() {
                 ))}
               </div>
             )}
-          </section>
-
-          <section className="panel sidebar-card write-card sidebar-write-card">
-            <h3>글쓰기</h3>
-            <form onSubmit={submitPost}>
-              <label>작성자<input name="nickname" placeholder="guest" defaultValue={username} /></label>
-              <label>제목<input name="title" placeholder="예: 숨은 명작 추천" required /></label>
-              <label>작품명<input name="movieTitle" placeholder="예: 인셉션" /></label>
-              <div className="form-row">
-                <label>카테고리<select name="type" defaultValue="free"><option value="free">자유</option><option value="movie">영화</option><option value="recommend">추천</option></select></label>
-                <label>별점<select name="rating" defaultValue="4"><option value="5">5.0</option><option value="4.5">4.5</option><option value="4">4.0</option><option value="3">3.0</option><option value="0">없음</option></select></label>
-              </div>
-              <label>내용<textarea name="content" placeholder="감상, 추천 이유, 해석하고 싶은 장면을 적어주세요." required /></label>
-              <label>태그<input name="tags" placeholder="예: 명작, 해석, 추천" /></label>
-              <label className="spoiler-check"><input name="spoiler" type="checkbox" /> 스포일러 포함</label>
-              <button className="btn btn-primary" type="submit">글쓰기</button>
-              {notice && <p className="compose-message">{notice}</p>}
-            </form>
           </section>
         </aside>
       </div>
