@@ -775,9 +775,18 @@ select { cursor: pointer; }
   cursor: pointer;
 }
 .board-post-stats button:hover { color: #ff8ba1; }
+.board-post-stats button.liked {
+  color: #ff8ba1;
+  font-weight: 900;
+}
 .board-comment-form {
   grid-column: 1 / -1;
   margin-top: 0;
+}
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
 }
 .community-board-sidebar {
   display: grid;

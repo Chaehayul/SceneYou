@@ -5,6 +5,9 @@ import { EmptyState, SectionHeading } from "../components/UI";
 import { api, hasApi } from "../lib/api";
 import { getCommunityPosts, getUser, getUserProfile, saveCommunityPosts } from "../lib/storage";
 
+const HOT_POST_LIMIT = 5;
+const INITIAL_POST_LIMIT = 8;
+
 const categories = [
   ["all", "전체"],
   ["free", "자유"],
@@ -32,6 +35,18 @@ const legacyMockIds = new Set([
   "seed-2",
   "seed-3",
 ]);
+
+function getLikedStorageKey(username) {
+  return `sceneyou_liked_posts_${username || "guest"}`;
+}
+
+function readLikedPostIds(username) {
+  try {
+    return JSON.parse(localStorage.getItem(getLikedStorageKey(username))) || [];
+  } catch {
+    return [];
+  }
+}
 
 function normalizeType(type) {
   if (type === "review") return "movie";
@@ -100,7 +115,9 @@ export default function CommunityPage() {
   const [revealedSpoilers, setRevealedSpoilers] = useState({});
   const [notice, setNotice] = useState("");
   const [composeOpen, setComposeOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_POST_LIMIT);
   const username = getUser() || "";
+  const [likedPostIds, setLikedPostIds] = useState(() => readLikedPostIds(username));
   const profile = getUserProfile();
   const displayName = profile.nickname || username;
 
@@ -113,6 +130,14 @@ export default function CommunityPage() {
         saveCommunityPosts(normalized);
       })
       .catch(() => {});
+  }, [category, query, sort]);
+
+  useEffect(() => {
+    setLikedPostIds(readLikedPostIds(username));
+  }, [username]);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_POST_LIMIT);
   }, [category, query, sort]);
 
   useEffect(() => {
@@ -141,7 +166,8 @@ export default function CommunityPage() {
       });
   }, [category, posts, query, sort]);
 
-  const hotPosts = useMemo(() => [...posts].sort((a, b) => getScore(b) - getScore(a)).slice(0, 5), [posts]);
+  const hotPosts = useMemo(() => [...posts].sort((a, b) => getScore(b) - getScore(a)).slice(0, HOT_POST_LIMIT), [posts]);
+  const visiblePosts = useMemo(() => filteredPosts.slice(0, visibleCount), [filteredPosts, visibleCount]);
   const keywords = useMemo(() => {
     const counts = {};
     posts.flatMap((post) => post.tags).forEach((tag) => {
@@ -211,11 +237,26 @@ export default function CommunityPage() {
       setNotice("로그인 후 좋아요를 누를 수 있습니다.");
       return;
     }
+    if (likedPostIds.includes(id)) {
+      setNotice("이미 좋아요를 누른 게시글입니다.");
+      return;
+    }
+
+    const nextLikedPostIds = [...likedPostIds, id];
+    setLikedPostIds(nextLikedPostIds);
+    localStorage.setItem(getLikedStorageKey(username), JSON.stringify(nextLikedPostIds));
     sync(posts.map((post) => post.id === id ? { ...post, likes: post.likes + 1 } : post));
+
     if (hasApi()) {
       api.likeCommunityPost(id)
         .then(({ likes }) => sync(posts.map((post) => post.id === id ? { ...post, likes } : post)))
-        .catch(() => {});
+        .catch(() => {
+          const rolledBack = likedPostIds.filter((postId) => postId !== id);
+          setLikedPostIds(rolledBack);
+          localStorage.setItem(getLikedStorageKey(username), JSON.stringify(rolledBack));
+          sync(posts);
+          setNotice("좋아요 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        });
     }
   }
 
@@ -281,7 +322,7 @@ export default function CommunityPage() {
       <section className="hot-board-section">
         <div className="board-section-title">
           <span><TrendingUp size={17} /> HOT 인기글</span>
-          <p>좋아요, 댓글, 조회수 기준으로 반응이 많은 글이에요.</p>
+          <p>상위 {HOT_POST_LIMIT}개만 보여주고, 좋아요·댓글·조회수 반응을 기준으로 정렬합니다.</p>
         </div>
         {hotPosts.length === 0 ? (
           <EmptyState title="아직 인기글이 없어요" description="게시글이 쌓이면 HOT 인기글이 표시됩니다." />
@@ -344,55 +385,67 @@ export default function CommunityPage() {
         <section className="latest-board-section">
           <div className="board-section-title">
             <span>최신 게시글</span>
-            <p>{filteredPosts.length}개의 이야기가 있어요.</p>
+            <p>{filteredPosts.length}개 중 {Math.min(visibleCount, filteredPosts.length)}개를 보고 있어요.</p>
           </div>
 
           {filteredPosts.length === 0 ? (
             <EmptyState title="게시글이 없어요" description="검색어를 바꾸거나 첫 글을 작성해보세요." />
           ) : (
-            <div className="board-post-list">
-              {filteredPosts.map((post) => {
-                const isSpoilerHidden = post.spoiler && !revealedSpoilers[post.id];
-                return (
-                  <article className="board-post-card" key={post.id}>
-                    <div className="board-post-main">
-                      <div className="board-post-head">
-                        <span className="post-category">{categoryLabels[post.type] || "자유"}</span>
-                        <span>{post.nickname}</span>
-                        <time>{timeAgo(post.createdAt)}</time>
+            <>
+              <div className="board-post-list">
+                {visiblePosts.map((post) => {
+                  const isSpoilerHidden = post.spoiler && !revealedSpoilers[post.id];
+                  const isLiked = likedPostIds.includes(post.id);
+                  return (
+                    <article className="board-post-card" key={post.id}>
+                      <div className="board-post-main">
+                        <div className="board-post-head">
+                          <span className="post-category">{categoryLabels[post.type] || "자유"}</span>
+                          <span>{post.nickname}</span>
+                          <time>{timeAgo(post.createdAt)}</time>
+                        </div>
+                        <Link className="board-post-title" to={`/movies?q=${encodeURIComponent(post.movieTitle)}`}>{post.title}</Link>
+                        <div className="board-post-sub">
+                          <span>{post.movieTitle}</span>
+                          {post.rating > 0 && <span className="post-rating"><Star size={14} fill="currentColor" /> {post.rating.toFixed(1)}</span>}
+                        </div>
+                        {isSpoilerHidden ? (
+                          <button className="spoiler-alert spoiler-button" onClick={() => setRevealedSpoilers((current) => ({ ...current, [post.id]: true }))} type="button">
+                            스포일러가 포함된 글입니다. 클릭해서 보기
+                          </button>
+                        ) : (
+                          <p>{post.content}</p>
+                        )}
+                        <div className="post-tags">{post.tags.map((tag) => <button key={tag} onClick={() => setQuery(tag)} type="button">#{tag}</button>)}</div>
                       </div>
-                      <Link className="board-post-title" to={`/movies?q=${encodeURIComponent(post.movieTitle)}`}>{post.title}</Link>
-                      <div className="board-post-sub">
-                        <span>{post.movieTitle}</span>
-                        {post.rating > 0 && <span className="post-rating"><Star size={14} fill="currentColor" /> {post.rating.toFixed(1)}</span>}
-                      </div>
-                      {isSpoilerHidden ? (
-                        <button className="spoiler-alert spoiler-button" onClick={() => setRevealedSpoilers((current) => ({ ...current, [post.id]: true }))} type="button">
-                          스포일러가 포함된 글입니다. 클릭해서 보기
+                      <div className="board-post-stats">
+                        <button className={isLiked ? "liked" : ""} onClick={() => likePost(post.id)} title={isLiked ? "이미 좋아요를 눌렀어요" : "좋아요"} type="button">
+                          <Heart size={15} fill={isLiked ? "currentColor" : "none"} /> {post.likes}
                         </button>
-                      ) : (
-                        <p>{post.content}</p>
-                      )}
-                      <div className="post-tags">{post.tags.map((tag) => <button key={tag} onClick={() => setQuery(tag)} type="button">#{tag}</button>)}</div>
-                    </div>
-                    <div className="board-post-stats">
-                      <button onClick={() => likePost(post.id)} type="button"><Heart size={15} /> {post.likes}</button>
-                      <span><MessageCircle size={15} /> {post.comments.length}</span>
-                      <span><Eye size={15} /> {post.views}</span>
-                    </div>
-                    <div className="comment-form board-comment-form">
-                      <input
-                        onChange={(event) => setCommentDrafts((current) => ({ ...current, [post.id]: event.target.value }))}
-                        onKeyDown={(event) => { if (event.key === "Enter") submitComment(post.id); }}
-                        placeholder="댓글을 입력하세요"
-                        value={commentDrafts[post.id] || ""}
-                      />
-                      <button onClick={() => submitComment(post.id)} type="button">등록</button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                        <span><MessageCircle size={15} /> {post.comments.length}</span>
+                        <span><Eye size={15} /> {post.views}</span>
+                      </div>
+                      <div className="comment-form board-comment-form">
+                        <input
+                          onChange={(event) => setCommentDrafts((current) => ({ ...current, [post.id]: event.target.value }))}
+                          onKeyDown={(event) => { if (event.key === "Enter") submitComment(post.id); }}
+                          placeholder="댓글을 입력하세요"
+                          value={commentDrafts[post.id] || ""}
+                        />
+                        <button onClick={() => submitComment(post.id)} type="button">등록</button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              {visibleCount < filteredPosts.length && (
+                <div className="load-more-row">
+                  <button className="btn btn-ghost" onClick={() => setVisibleCount((count) => count + INITIAL_POST_LIMIT)} type="button">
+                    게시글 더보기
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
@@ -415,9 +468,9 @@ export default function CommunityPage() {
           </section>
 
           <section className="panel sidebar-card">
-            <h3>이번 주 인기 콘텐츠</h3>
+            <h3>이번 주 인기 영화</h3>
             {weeklyContents.length === 0 ? (
-              <SidebarEmpty>조회 데이터가 생기면 인기 콘텐츠가 표시됩니다.</SidebarEmpty>
+              <SidebarEmpty>조회 데이터가 생기면 인기 영화가 표시됩니다.</SidebarEmpty>
             ) : (
               <div className="sidebar-rank-list">
                 {weeklyContents.map((post, index) => (
