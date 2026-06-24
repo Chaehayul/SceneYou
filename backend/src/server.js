@@ -120,6 +120,17 @@ function cleanText(value, fallback = "") {
   return String(value || fallback).trim();
 }
 
+function isValidNickname(value) {
+  const nickname = cleanText(value);
+  return nickname.length >= 2 && nickname.length <= 16 && !/[<>/{}[\]\\]/.test(nickname);
+}
+
+function makeRecommendedNickname(username) {
+  const base = cleanText(username, "scene").replace(/_/g, "").slice(0, 10) || "scene";
+  const suffix = crypto.randomInt(100, 999);
+  return `${base}_scene${suffix}`;
+}
+
 function normalizeType(type) {
   if (type === "review") return "movie";
   if (type === "talk") return "free";
@@ -146,12 +157,12 @@ async function findOrCreateUser(username = "guest", password = "demo-password") 
   const existing = await prisma.user.findUnique({ where: { username: safeUsername } });
   if (existing) return existing;
   return prisma.user.create({
-    data: { username: safeUsername, passwordHash: hashPassword(password) },
+    data: { username: safeUsername, nickname: safeUsername, passwordHash: hashPassword(password) },
   });
 }
 
 function toClientUser(user) {
-  return { id: user.id, username: user.username };
+  return { id: user.id, username: user.username, nickname: user.nickname || user.username };
 }
 
 function toAuthResponse(user) {
@@ -429,14 +440,18 @@ app.post("/api/auth/signup", async (req, res, next) => {
   try {
     const username = cleanText(req.body.username);
     const password = cleanText(req.body.password);
+    const nickname = cleanText(req.body.nickname, makeRecommendedNickname(username));
     if (!username || !password) return res.status(400).json({ message: "?꾩씠?붿? 鍮꾨?踰덊샇瑜??낅젰??二쇱꽭??" });
     if (!usernamePattern.test(username)) {
       return res.status(400).json({ message: "?꾩씠?붾뒗 ?곷Ц, ?レ옄, 諛묒쨪(_) 議고빀?쇰줈 3~20?먭퉴吏 ?낅젰??二쇱꽭??" });
     }
+    if (!isValidNickname(nickname)) {
+      return res.status(400).json({ message: "닉네임은 한글, 영문, 숫자 조합으로 2~16자까지 입력해 주세요." });
+    }
     if (password.length < 6) return res.status(400).json({ message: "鍮꾨?踰덊샇??6???댁긽 ?낅젰??二쇱꽭??" });
     const exists = await prisma.user.findUnique({ where: { username } });
     if (exists) return res.status(409).json({ message: "?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎." });
-    const user = await prisma.user.create({ data: { username, passwordHash: hashPassword(password) } });
+    const user = await prisma.user.create({ data: { username, nickname, passwordHash: hashPassword(password) } });
     res.status(201).json(toAuthResponse(user));
   } catch (error) {
     next(error);
@@ -453,7 +468,7 @@ app.post("/api/auth/signin", async (req, res, next) => {
     let user = await prisma.user.findUnique({ where: { username } });
     if (!user && username === demoAccount.username && password === demoAccount.password) {
       user = await prisma.user.create({
-        data: { username, passwordHash: hashPassword(password) },
+        data: { username, nickname: "SceneYou 체험", passwordHash: hashPassword(password) },
       });
     }
     if (!user || !verifyPassword(password, user.passwordHash)) {
@@ -463,6 +478,12 @@ app.post("/api/auth/signin", async (req, res, next) => {
       user = await prisma.user.update({
         where: { id: user.id },
         data: { passwordHash: hashPassword(password) },
+      });
+    }
+    if (!user.nickname) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { nickname: username === demoAccount.username ? "SceneYou 체험" : makeRecommendedNickname(username) },
       });
     }
     await ensureDemoAccountContent(user);
@@ -556,7 +577,7 @@ app.post("/api/reviews/:tmdbId", requireAuth, async (req, res, next) => {
         userId: user.id,
         tmdbId: Number(req.params.tmdbId),
         movieTitle: cleanText(req.body.movieTitle),
-        nickname: cleanText(req.body.nickname, user.username),
+        nickname: user.nickname || user.username,
         rating: Number(req.body.rating),
         text,
       },
@@ -632,7 +653,7 @@ app.post("/api/community/posts", requireAuth, async (req, res, next) => {
         type: normalizeType(cleanText(req.body.type, "free")),
         title,
         movieTitle,
-        nickname: cleanText(req.body.nickname, user.username),
+        nickname: user.nickname || user.username,
         rating: Number(req.body.rating || 0),
         content,
         spoiler: Boolean(req.body.spoiler),
@@ -671,7 +692,7 @@ app.post("/api/community/posts/:postId/comments", requireAuth, async (req, res, 
       data: {
         postId: req.params.postId,
         userId: user.id,
-        nickname: cleanText(req.body.nickname, user.username),
+        nickname: user.nickname || user.username,
         content,
       },
     });

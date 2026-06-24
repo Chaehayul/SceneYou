@@ -7,6 +7,16 @@ import { getUser, setSession, signIn, signUp } from "../lib/storage";
 const DEMO_ACCOUNT = { id: "demo", password: "demo123" };
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 
+function isValidNickname(value) {
+  const nickname = String(value || "").trim();
+  return nickname.length >= 2 && nickname.length <= 16 && !/[<>/{}[\]\\]/.test(nickname);
+}
+
+function recommendNickname(seed = "scene") {
+  const base = String(seed || "scene").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 8) || "scene";
+  return `${base}_scene${Math.floor(100 + Math.random() * 900)}`;
+}
+
 function getPasswordLevel(password) {
   return [
     password.length >= 6,
@@ -23,6 +33,7 @@ function AuthShell({ type }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+  const [nickname, setNickname] = useState("");
   const login = type === "login";
   const passwordLevel = useMemo(() => getPasswordLevel(password), [password]);
 
@@ -34,7 +45,7 @@ function AuthShell({ type }) {
     formRef.current.elements.password.value = DEMO_ACCOUNT.password;
     setPassword(DEMO_ACCOUNT.password);
     setSuccess(false);
-    setMessage("체험 계정이 입력됐어요. 로그인 버튼을 눌러주세요.");
+    setMessage("체험 계정이 입력되었어요. 로그인 버튼을 눌러주세요.");
   }
 
   async function submit(event) {
@@ -43,6 +54,7 @@ function AuthShell({ type }) {
 
     const form = new FormData(event.currentTarget);
     const id = String(form.get("id") || "").trim();
+    const currentNickname = String(form.get("nickname") || "").trim();
     const currentPassword = String(form.get("password") || "");
     const confirmPassword = String(form.get("confirm") || "");
 
@@ -51,6 +63,10 @@ function AuthShell({ type }) {
 
     if (!USERNAME_PATTERN.test(id)) {
       setMessage("아이디는 영문, 숫자, 밑줄(_) 조합으로 3~20자까지 입력해 주세요.");
+      return;
+    }
+    if (!login && !isValidNickname(currentNickname)) {
+      setMessage("닉네임은 2~16자로 입력해 주세요.");
       return;
     }
     if (currentPassword.length < 6) {
@@ -65,15 +81,18 @@ function AuthShell({ type }) {
     setLoading(true);
     try {
       if (hasApi()) {
-        const authResult = await (login ? api.signIn(id, currentPassword) : api.signUp(id, currentPassword));
+        const authResult = await (login
+          ? api.signIn(id, currentPassword)
+          : api.signUp(id, currentPassword, currentNickname));
         setSession(authResult);
       } else {
-        const result = login ? signIn(id, currentPassword) : signUp(id, currentPassword);
+        const result = login ? signIn(id, currentPassword) : signUp(id, currentPassword, currentNickname);
         if (!result.ok) throw new Error(result.message);
+        if (!login) setSession({ user: { username: id, nickname: currentNickname } });
       }
 
       setSuccess(true);
-      setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다. 홈으로 이동합니다.");
+      setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다.");
       setTimeout(() => navigate("/"), 750);
     } catch (error) {
       setMessage(error.message || "요청 처리 중 오류가 발생했습니다.");
@@ -88,7 +107,7 @@ function AuthShell({ type }) {
         <div className="auth-orbit"><Film /></div>
         <div className="auth-visual-copy">
           <span className="eyebrow"><Sparkles size={14} /> {login ? "WELCOME BACK" : "START YOUR SCENE"}</span>
-          <h1>{login ? <>다시 만나는<br />나의 영화 기록.</> : <>좋아하는 영화가<br />취향이 되는 곳.</>}</h1>
+          <h1>{login ? <>다시 만나는<br />나의 영화 기록.</> : <>좋아하는 영화가<br />취향이 되는 곳</>}</h1>
           <p>{login ? "저장한 영화와 리뷰, 커뮤니티 활동을 이어서 확인해보세요." : "컬렉션, 리뷰, 커뮤니티 활동을 SceneYou 계정으로 관리해보세요."}</p>
         </div>
       </section>
@@ -98,7 +117,7 @@ function AuthShell({ type }) {
           <span className="auth-symbol"><LockKeyhole /></span>
           <span className="eyebrow">{login ? "SIGN IN" : "CREATE ACCOUNT"}</span>
           <h2>{login ? "로그인" : "회원가입"}</h2>
-          <p>{login ? "SceneYou 계정으로 나의 영화 취향을 이어가세요." : "간단한 정보로 계정을 만들고 영화 취향을 기록하세요."}</p>
+          <p>{login ? "SceneYou 계정으로 나의 영화 취향을 이어가세요." : "닉네임을 정하고 커뮤니티에서 영화 이야기를 나눠보세요."}</p>
 
           {login && (
             <div className="demo-account-box">
@@ -121,6 +140,32 @@ function AuthShell({ type }) {
               required
             />
           </label>
+
+          {!login && (
+            <label>
+              닉네임
+              <span className="nickname-field">
+                <input
+                  maxLength="16"
+                  minLength="2"
+                  name="nickname"
+                  onChange={(event) => setNickname(event.target.value)}
+                  placeholder="커뮤니티에 표시될 이름"
+                  required
+                  value={nickname}
+                />
+                <button
+                  onClick={() => {
+                    const idValue = formRef.current?.elements.id.value || "scene";
+                    setNickname(recommendNickname(idValue));
+                  }}
+                  type="button"
+                >
+                  자동추천
+                </button>
+              </span>
+            </label>
+          )}
 
           <label>
             비밀번호

@@ -3,6 +3,7 @@ import { api, hasApi, setAuthToken } from "./api";
 const COLLECTION_KEY = "sceneyou_collection";
 const RECENT_KEY = "sceneyou_recent";
 const USER_KEY = "sceneyou_user";
+const USER_PROFILE_KEY = "sceneyou_user_profile";
 const COMMUNITY_KEY = "sceneyou_community_posts";
 const LEGACY_COLLECTION_KEY = "myCollection";
 const LEGACY_USER_KEY = "loggedInUser";
@@ -66,6 +67,10 @@ export function getUser() {
   return localStorage.getItem(USER_KEY) || localStorage.getItem(LEGACY_USER_KEY) || "";
 }
 
+export function getUserProfile() {
+  return read(USER_PROFILE_KEY, null) || { username: getUser(), nickname: getUser() };
+}
+
 export function setCurrentUser(id) {
   localStorage.setItem(USER_KEY, id);
   window.dispatchEvent(new CustomEvent("sceneyou:user"));
@@ -73,8 +78,10 @@ export function setCurrentUser(id) {
 
 export function setSession(authResult) {
   const username = authResult?.user?.username || authResult?.username || "";
+  const nickname = authResult?.user?.nickname || username;
   const token = authResult?.token || "";
   if (username) setCurrentUser(username);
+  if (username) localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ username, nickname }));
   if (token) setAuthToken(token);
   if (token && hasApi()) {
     api.getCollection()
@@ -94,17 +101,19 @@ export function signIn(id, password) {
   return { ok: true };
 }
 
-export function signUp(id, password) {
+export function signUp(id, password, nickname = id) {
   if (localStorage.getItem(`sceneyou_account_${id}`) !== null || localStorage.getItem(id) !== null) {
     return { ok: false, message: "이미 사용 중인 아이디입니다." };
   }
   localStorage.setItem(`sceneyou_account_${id}`, password);
+  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ username: id, nickname }));
   return { ok: true };
 }
 
 export function signOut() {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(LEGACY_USER_KEY);
+  localStorage.removeItem(USER_PROFILE_KEY);
   setAuthToken("");
   window.dispatchEvent(new CustomEvent("sceneyou:user"));
 }

@@ -53,9 +53,9 @@ export function setAuthToken(token) {
 
 export const api = {
   health: () => request("/api/health"),
-  signUp: (username, password) => request("/api/auth/signup", {
+  signUp: (username, password, nickname) => request("/api/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, nickname }),
   }),
   signIn: (username, password) => request("/api/auth/signin", {
     method: "POST",

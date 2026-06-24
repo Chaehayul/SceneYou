@@ -964,6 +964,41 @@ select { cursor: pointer; }
   position: relative;
   display: block;
 }
+.nickname-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.nickname-field button {
+  min-height: 50px;
+  padding: 0 13px;
+  color: #ffc0ac;
+  border: 1px solid rgba(255, 95, 61, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 95, 61, 0.08);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.write-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.author-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  color: #ffc0ac;
+  border: 1px solid rgba(255, 95, 61, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 95, 61, 0.08);
+  font-size: 12px;
+  font-weight: 900;
+}
 .password-field input { width: 100%; padding-right: 48px; }
 .password-field button {
   position: absolute;

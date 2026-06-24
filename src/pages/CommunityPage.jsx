@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Heart, MessageCircle, PenLine, Search, Star, TrendingUp } from "lucide-react";
+import { Eye, Heart, MessageCircle, PenLine, Search, Star, TrendingUp, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { EmptyState, SectionHeading } from "../components/UI";
 import { api, hasApi } from "../lib/api";
-import { getCommunityPosts, getUser, saveCommunityPosts } from "../lib/storage";
+import { getCommunityPosts, getUser, getUserProfile, saveCommunityPosts } from "../lib/storage";
 
 const categories = [
   ["all", "전체"],
@@ -109,7 +109,10 @@ export default function CommunityPage() {
   const [commentDrafts, setCommentDrafts] = useState({});
   const [revealedSpoilers, setRevealedSpoilers] = useState({});
   const [notice, setNotice] = useState("");
+  const [composeOpen, setComposeOpen] = useState(false);
   const username = getUser() || "";
+  const profile = getUserProfile();
+  const displayName = profile.nickname || username;
 
   useEffect(() => {
     if (!hasApi()) return;
@@ -178,7 +181,7 @@ export default function CommunityPage() {
       type: form.get("type"),
       title,
       movieTitle: movieTitle || title,
-      nickname: String(form.get("nickname") || "").trim() || username || "guest",
+      nickname: displayName || username || "guest",
       content,
       rating: Number(form.get("rating") || 0),
       spoiler: form.get("spoiler") === "on",
@@ -226,7 +229,7 @@ export default function CommunityPage() {
     }
     const nextComment = {
       id: crypto.randomUUID(),
-      nickname: username || "guest",
+      nickname: displayName || username || "guest",
       content,
       createdAt: Date.now(),
     };
@@ -239,7 +242,7 @@ export default function CommunityPage() {
 
     if (hasApi()) {
       api.createCommunityComment(postId, {
-        nickname: username || "guest",
+        nickname: displayName || username || "guest",
         content,
       }).catch(() => {});
     }
@@ -251,7 +254,7 @@ export default function CommunityPage() {
         eyebrow="COMMUNITY"
         title="커뮤니티"
         description="영화와 드라마를 보고 난 뒤의 감상, 해석, 추천을 함께 나누는 공간입니다."
-        action={<a className="btn btn-primary" href="#write-post"><PenLine size={16} /> 글쓰기</a>}
+        action={<button className="btn btn-primary" onClick={() => setComposeOpen((current) => !current)} type="button"><PenLine size={16} /> 글쓰기</button>}
       />
 
       <section className="community-board-toolbar">
@@ -303,6 +306,7 @@ export default function CommunityPage() {
         )}
       </section>
 
+      {composeOpen && (
       <section className="panel write-card community-write-panel" id="write-post">
         <div className="write-panel-head">
           <div>
@@ -310,10 +314,12 @@ export default function CommunityPage() {
             <h3>글쓰기</h3>
             <p>{username ? "감상, 해석, 추천하고 싶은 작품 이야기를 커뮤니티에 남겨보세요." : "로그인하면 글쓰기, 댓글, 좋아요 기능을 사용할 수 있습니다."}</p>
           </div>
-          {!username && <Link className="btn btn-primary" to="/login">로그인하고 참여하기</Link>}
+          <div className="write-panel-actions">
+            {username ? <span className="author-chip">작성자 {displayName}</span> : <Link className="btn btn-primary" to="/login">로그인하고 참여하기</Link>}
+            <button className="text-button" onClick={() => setComposeOpen(false)} type="button"><X size={16} /> 닫기</button>
+          </div>
         </div>
         <form onSubmit={submitPost} className={!username ? "locked-form" : ""}>
-          <label>작성자<input name="nickname" placeholder="guest" defaultValue={username} disabled={!username} /></label>
           <label>제목<input name="title" placeholder="예: 숨은 명작 추천받아요" required disabled={!username} /></label>
           <label>작품명<input name="movieTitle" placeholder="예: 인셉션" disabled={!username} /></label>
           <div className="form-row">
@@ -329,6 +335,7 @@ export default function CommunityPage() {
           {notice && <p className="compose-message">{notice}</p>}
         </form>
       </section>
+      )}
 
       <div className="community-board-layout">
         <section className="latest-board-section">
