@@ -1,4 +1,4 @@
-import { api, hasApi } from "./api";
+import { api, hasApi, setAuthToken } from "./api";
 
 const COLLECTION_KEY = "sceneyou_collection";
 const RECENT_KEY = "sceneyou_recent";
@@ -24,14 +24,18 @@ export function getCollection() {
 }
 
 export function toggleCollection(movie) {
+  if (hasApi() && !getUser()) {
+    window.alert("로그인 후 컬렉션에 저장할 수 있습니다.");
+    return isCollected(movie.id);
+  }
   const collection = getCollection();
   const exists = collection.some((item) => Number(item.id) === Number(movie.id));
   const next = exists
     ? collection.filter((item) => Number(item.id) !== Number(movie.id))
     : [{ ...movie, savedAt: Date.now() }, ...collection];
   localStorage.setItem(COLLECTION_KEY, JSON.stringify(next));
-  if (hasApi()) {
-    const user = getUser() || "guest";
+  if (hasApi() && getUser()) {
+    const user = getUser();
     const action = exists ? api.deleteCollection(user, movie.id) : api.saveCollection(user, movie);
     action.catch(() => {});
   }
@@ -67,6 +71,21 @@ export function setCurrentUser(id) {
   window.dispatchEvent(new CustomEvent("sceneyou:user"));
 }
 
+export function setSession(authResult) {
+  const username = authResult?.user?.username || authResult?.username || "";
+  const token = authResult?.token || "";
+  if (username) setCurrentUser(username);
+  if (token) setAuthToken(token);
+  if (token && hasApi()) {
+    api.getCollection()
+      .then((items) => {
+        localStorage.setItem(COLLECTION_KEY, JSON.stringify(items));
+        window.dispatchEvent(new CustomEvent("sceneyou:collection"));
+      })
+      .catch(() => {});
+  }
+}
+
 export function signIn(id, password) {
   const stored = localStorage.getItem(`sceneyou_account_${id}`) ?? localStorage.getItem(id);
   if (stored === null) return { ok: false, message: "등록되지 않은 아이디입니다." };
@@ -86,6 +105,7 @@ export function signUp(id, password) {
 export function signOut() {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(LEGACY_USER_KEY);
+  setAuthToken("");
   window.dispatchEvent(new CustomEvent("sceneyou:user"));
 }
 

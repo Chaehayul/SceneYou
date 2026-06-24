@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, Eye, EyeOff, Film, LoaderCircle, LockKeyhole, Sparkles } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { api, hasApi } from "../lib/api";
-import { getUser, setCurrentUser, signIn, signUp } from "../lib/storage";
+import { getUser, setSession, signIn, signUp } from "../lib/storage";
 
 const DEMO_ACCOUNT = { id: "demo", password: "demo123" };
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
@@ -65,16 +65,16 @@ function AuthShell({ type }) {
     setLoading(true);
     try {
       if (hasApi()) {
-        await (login ? api.signIn(id, currentPassword) : api.signUp(id, currentPassword));
-        if (login) setCurrentUser(id);
+        const authResult = await (login ? api.signIn(id, currentPassword) : api.signUp(id, currentPassword));
+        setSession(authResult);
       } else {
         const result = login ? signIn(id, currentPassword) : signUp(id, currentPassword);
         if (!result.ok) throw new Error(result.message);
       }
 
       setSuccess(true);
-      setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다. 로그인 화면으로 이동합니다.");
-      setTimeout(() => navigate(login ? "/" : "/login"), 750);
+      setMessage(login ? "로그인되었습니다." : "회원가입이 완료되었습니다. 홈으로 이동합니다.");
+      setTimeout(() => navigate("/"), 750);
     } catch (error) {
       setMessage(error.message || "요청 처리 중 오류가 발생했습니다.");
     } finally {

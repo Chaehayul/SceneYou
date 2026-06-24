@@ -1,4 +1,5 @@
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const TOKEN_KEY = "sceneyou_auth_token";
 
 export function hasApi() {
   return Boolean(API_URL);
@@ -17,11 +18,16 @@ function withParams(path, params = {}) {
 
 async function request(path, options = {}) {
   if (!API_URL) throw new Error("API URL is not configured.");
+  const token = localStorage.getItem(TOKEN_KEY);
 
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
       ...options,
     });
   } catch {
@@ -36,6 +42,15 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+export function getAuthToken() {
+  return localStorage.getItem(TOKEN_KEY) || "";
+}
+
+export function setAuthToken(token) {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+}
+
 export const api = {
   health: () => request("/api/health"),
   signUp: (username, password) => request("/api/auth/signup", {
@@ -46,12 +61,13 @@ export const api = {
     method: "POST",
     body: JSON.stringify({ username, password }),
   }),
-  getCollection: (user) => request(`/api/collection?user=${encodeURIComponent(user || "guest")}`),
-  saveCollection: (user, movie) => request("/api/collection", {
+  me: () => request("/api/auth/me"),
+  getCollection: () => request("/api/collection"),
+  saveCollection: (_user, movie) => request("/api/collection", {
     method: "POST",
-    body: JSON.stringify({ user, movie }),
+    body: JSON.stringify({ movie }),
   }),
-  deleteCollection: (user, tmdbId) => request(`/api/collection/${tmdbId}?user=${encodeURIComponent(user || "guest")}`, {
+  deleteCollection: (_user, tmdbId) => request(`/api/collection/${tmdbId}`, {
     method: "DELETE",
   }),
   getReviews: (tmdbId) => request(`/api/reviews/${tmdbId}`),
@@ -64,9 +80,9 @@ export const api = {
     method: "POST",
     body: JSON.stringify(payload),
   }),
-  likeCommunityPost: (postId, user) => request(`/api/community/posts/${postId}/like`, {
+  likeCommunityPost: (postId) => request(`/api/community/posts/${postId}/like`, {
     method: "POST",
-    body: JSON.stringify({ user }),
+    body: JSON.stringify({}),
   }),
   createCommunityComment: (postId, payload) => request(`/api/community/posts/${postId}/comments`, {
     method: "POST",

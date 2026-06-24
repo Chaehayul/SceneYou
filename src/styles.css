@@ -784,6 +784,7 @@ select { cursor: pointer; }
   align-content: start;
   gap: 14px;
 }
+.sidebar-write-card { display: none; }
 .sidebar-card h3 {
   margin: 0 0 15px;
   font-size: 17px;
@@ -850,6 +851,50 @@ select { cursor: pointer; }
   line-height: 1.6;
 }
 .write-card form { display: grid; gap: 12px; }
+.community-write-panel {
+  margin-bottom: 28px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255, 95, 61, 0.12), transparent 18rem),
+    var(--surface);
+}
+.write-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.write-panel-head h3 {
+  margin: 7px 0;
+  font-size: 25px;
+  letter-spacing: -0.04em;
+}
+.write-panel-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.community-write-panel form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.community-write-panel label:has(textarea),
+.community-write-panel label:has(input[name="tags"]),
+.community-write-panel .compose-bottom,
+.community-write-panel .compose-message {
+  grid-column: 1 / -1;
+}
+.community-write-panel textarea {
+  min-height: 140px;
+}
+.locked-form {
+  opacity: 0.62;
+}
+.locked-form input,
+.locked-form select,
+.locked-form textarea,
+.locked-form button {
+  cursor: not-allowed;
+}
 .write-card label {
   display: grid;
   gap: 7px;
@@ -996,6 +1041,8 @@ select { cursor: pointer; }
   .feed-toolbar { grid-template-columns: 1fr; }
   .community-board-toolbar { grid-template-columns: 1fr; }
   .hot-post-grid { grid-template-columns: 1fr; }
+  .community-write-panel form { grid-template-columns: 1fr; }
+  .write-panel-head { flex-direction: column; }
   .community-board-layout { grid-template-columns: 1fr; }
   .community-board-sidebar { order: 2; }
   .featured-events, .event-grid { grid-template-columns: 1fr; }

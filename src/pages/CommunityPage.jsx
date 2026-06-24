@@ -163,6 +163,11 @@ export default function CommunityPage() {
     const movieTitle = String(form.get("movieTitle") || "").trim();
     const content = String(form.get("content") || "").trim();
 
+    if (hasApi() && !username) {
+      setNotice("로그인 후 글을 작성할 수 있습니다.");
+      return;
+    }
+
     if (!title || !content) {
       setNotice("제목과 내용을 입력해 주세요.");
       return;
@@ -193,16 +198,20 @@ export default function CommunityPage() {
     event.currentTarget.reset();
 
     if (hasApi()) {
-      api.createCommunityPost({ ...nextPost, user: username || nextPost.nickname })
+      api.createCommunityPost(nextPost)
         .then((savedPost) => sync([normalizePost(savedPost), ...posts.filter((post) => post.id !== nextPost.id)]))
         .catch(() => {});
     }
   }
 
   function likePost(id) {
+    if (hasApi() && !username) {
+      setNotice("로그인 후 좋아요를 누를 수 있습니다.");
+      return;
+    }
     sync(posts.map((post) => post.id === id ? { ...post, likes: post.likes + 1 } : post));
     if (hasApi()) {
-      api.likeCommunityPost(id, username || "guest")
+      api.likeCommunityPost(id)
         .then(({ likes }) => sync(posts.map((post) => post.id === id ? { ...post, likes } : post)))
         .catch(() => {});
     }
@@ -211,6 +220,10 @@ export default function CommunityPage() {
   function submitComment(postId) {
     const content = commentDrafts[postId]?.trim();
     if (!content) return;
+    if (hasApi() && !username) {
+      setNotice("로그인 후 댓글을 작성할 수 있습니다.");
+      return;
+    }
     const nextComment = {
       id: crypto.randomUUID(),
       nickname: username || "guest",
@@ -226,7 +239,6 @@ export default function CommunityPage() {
 
     if (hasApi()) {
       api.createCommunityComment(postId, {
-        user: username || "guest",
         nickname: username || "guest",
         content,
       }).catch(() => {});
@@ -289,6 +301,33 @@ export default function CommunityPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="panel write-card community-write-panel" id="write-post">
+        <div className="write-panel-head">
+          <div>
+            <span className="eyebrow">WRITE</span>
+            <h3>글쓰기</h3>
+            <p>{username ? "감상, 해석, 추천하고 싶은 작품 이야기를 커뮤니티에 남겨보세요." : "로그인하면 글쓰기, 댓글, 좋아요 기능을 사용할 수 있습니다."}</p>
+          </div>
+          {!username && <Link className="btn btn-primary" to="/login">로그인하고 참여하기</Link>}
+        </div>
+        <form onSubmit={submitPost} className={!username ? "locked-form" : ""}>
+          <label>작성자<input name="nickname" placeholder="guest" defaultValue={username} disabled={!username} /></label>
+          <label>제목<input name="title" placeholder="예: 숨은 명작 추천받아요" required disabled={!username} /></label>
+          <label>작품명<input name="movieTitle" placeholder="예: 인셉션" disabled={!username} /></label>
+          <div className="form-row">
+            <label>카테고리<select name="type" defaultValue="free" disabled={!username}><option value="free">자유</option><option value="movie">영화</option><option value="recommend">추천</option></select></label>
+            <label>별점<select name="rating" defaultValue="4" disabled={!username}><option value="5">5.0</option><option value="4.5">4.5</option><option value="4">4.0</option><option value="3">3.0</option><option value="0">없음</option></select></label>
+          </div>
+          <label>내용<textarea name="content" placeholder="감상, 추천 이유, 해석하고 싶은 장면을 적어주세요." required disabled={!username} /></label>
+          <label>태그<input name="tags" placeholder="예: 명작, 해석, 추천" disabled={!username} /></label>
+          <div className="compose-bottom">
+            <label className="spoiler-check"><input name="spoiler" type="checkbox" disabled={!username} /> 스포일러 포함</label>
+            <button className="btn btn-primary" type="submit" disabled={!username}>글쓰기</button>
+          </div>
+          {notice && <p className="compose-message">{notice}</p>}
+        </form>
       </section>
 
       <div className="community-board-layout">
@@ -399,7 +438,7 @@ export default function CommunityPage() {
             )}
           </section>
 
-          <section className="panel sidebar-card write-card" id="write-post">
+          <section className="panel sidebar-card write-card sidebar-write-card">
             <h3>글쓰기</h3>
             <form onSubmit={submitPost}>
               <label>작성자<input name="nickname" placeholder="guest" defaultValue={username} /></label>

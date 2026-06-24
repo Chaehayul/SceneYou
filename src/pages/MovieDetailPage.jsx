@@ -69,6 +69,10 @@ export default function MovieDetailPage() {
     const text = form.get("review").trim();
     const rating = Number(form.get("rating"));
     if (!text || !rating) return;
+    if (hasApi() && !getUser()) {
+      alert("로그인 후 리뷰를 작성할 수 있습니다.");
+      return;
+    }
     const next = [{
       id: crypto.randomUUID(),
       nickname: form.get("nickname").trim() || "익명",
@@ -80,7 +84,6 @@ export default function MovieDetailPage() {
     saveReviews(movieId, next);
     if (hasApi()) {
       api.createReview(movieId, {
-        user: getUser() || "guest",
         movieTitle: movie.title,
         nickname: form.get("nickname").trim() || "익명",
         rating,

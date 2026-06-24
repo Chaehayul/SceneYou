@@ -19,7 +19,8 @@ export default function CollectionPage() {
 
   useEffect(() => {
     if (!hasApi()) return;
-    api.getCollection(getUser() || "guest")
+    if (!getUser()) return;
+    api.getCollection()
       .then(setCollection)
       .catch(() => {});
   }, []);

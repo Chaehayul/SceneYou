@@ -35,6 +35,7 @@ Backend:
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/sceneyou?schema=public"
 PORT=8787
 CLIENT_ORIGIN="https://your-vercel-domain.vercel.app"
+AUTH_SECRET="replace-with-a-long-random-secret"
 ```
 
 ## Local Development
