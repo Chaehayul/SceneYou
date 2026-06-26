@@ -1,6 +1,14 @@
 # SceneYou
 
-React와 TMDB API 기반의 영화 정보·취향 분석 웹 서비스입니다. 영화 검색, 상세 정보, OTT 제공처, 컬렉션 저장, 리뷰, 커뮤니티, 취향 분석 기능을 제공합니다.
+React와 TMDB API 기반의 영화 정보, 컬렉션, 리뷰, 커뮤니티, 취향 분석 서비스입니다.
+
+## Project Structure
+
+```text
+SceneYou/
+  frontend/   React + Vite client
+  backend/    Node.js + Express + Prisma API
+```
 
 ## Features
 
@@ -22,14 +30,14 @@ React와 TMDB API 기반의 영화 정보·취향 분석 웹 서비스입니다.
 
 ## Environment Variables
 
-Frontend:
+Frontend: `frontend/.env`
 
 ```env
 VITE_TMDB_API_KEY=your_tmdb_api_key
 VITE_API_URL=https://your-api-server.onrender.com
 ```
 
-Backend:
+Backend: `backend/.env`
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/sceneyou?schema=public"
@@ -40,17 +48,32 @@ AUTH_SECRET="replace-with-a-long-random-secret"
 
 ## Local Development
 
+Install dependencies:
+
 ```bash
+cd frontend
 npm install
+
+cd ../backend
+npm install
+```
+
+Run from the project root:
+
+```bash
+npm run dev
+npm run dev:backend
+```
+
+Or run each app directly:
+
+```bash
+cd frontend
 npm run dev
 ```
 
-API server:
-
 ```bash
 cd backend
-npm install
-copy .env.example .env
 npm run db:generate
 npm run db:push
 npm run dev
@@ -58,7 +81,17 @@ npm run dev
 
 ## Build
 
+From the project root:
+
 ```bash
+npm run build
+npm run preview
+```
+
+Or from `frontend`:
+
+```bash
+cd frontend
 npm run build
 npm run preview
 ```
@@ -68,6 +101,7 @@ npm run preview
 Frontend is deployed on Vercel.
 
 - Framework Preset: Vite
+- Root Directory: `frontend`
 - Build Command: `npm run build`
 - Output Directory: `dist`
 
@@ -77,4 +111,4 @@ Backend is deployed on Render.
 - Build Command: `npm install && npm run db:generate && npm run db:push`
 - Start Command: `npm start`
 
-`vercel.json` includes SPA routing support for React Router.
+`frontend/vercel.json` includes SPA routing support for React Router.

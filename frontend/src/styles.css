@@ -1098,6 +1098,9 @@ select { cursor: pointer; }
   .mobile-search input { width: 100%; height: 44px; color: white; border: 0; outline: 0; background: transparent; }
   .mobile-panel nav { display: grid; }
   .mobile-panel nav a { padding: 13px 4px; color: var(--muted); border-bottom: 1px solid var(--line); font-weight: 700; }
+  .mobile-auth-area { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .mobile-auth-area span { grid-column: 1 / -1; color: var(--muted); font-size: 13px; font-weight: 800; }
+  .mobile-auth-area .btn { width: 100%; min-height: 46px; }
   .movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .quick-grid { grid-template-columns: 1fr; }
   .detail-columns { grid-template-columns: 1fr; }

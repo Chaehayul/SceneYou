@@ -43,6 +43,11 @@ export default function Layout() {
     navigate("/");
   }
 
+  function logoutFromMobile() {
+    setMenuOpen(false);
+    logout();
+  }
+
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -84,7 +89,10 @@ export default function Layout() {
                 {user} · 로그아웃
               </button>
             ) : (
-              <Link className="btn btn-ghost auth-button" to="/login">로그인</Link>
+              <>
+                <Link className="btn btn-ghost auth-button" to="/login">로그인</Link>
+                <Link className="btn btn-primary auth-button" to="/signup">회원가입</Link>
+              </>
             )}
 
             <button
@@ -116,8 +124,22 @@ export default function Layout() {
                   {item.label}
                 </NavLink>
               ))}
+              <NavLink to="/mypage" onClick={() => setMenuOpen(false)}>마이페이지</NavLink>
               <NavLink to="/collection" onClick={() => setMenuOpen(false)}>내 컬렉션</NavLink>
             </nav>
+            <div className="mobile-auth-area">
+              {user ? (
+                <>
+                  <span>{user}님으로 로그인 중</span>
+                  <button className="btn btn-ghost" onClick={logoutFromMobile} type="button">로그아웃</button>
+                </>
+              ) : (
+                <>
+                  <Link className="btn btn-ghost" to="/login" onClick={() => setMenuOpen(false)}>로그인</Link>
+                  <Link className="btn btn-primary" to="/signup" onClick={() => setMenuOpen(false)}>회원가입</Link>
+                </>
+              )}
+            </div>
           </div>
         )}
       </header>
