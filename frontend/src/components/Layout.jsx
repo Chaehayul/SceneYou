@@ -11,6 +11,8 @@ const links = [
   { to: "/taste", label: "취향 분석" },
 ];
 
+const mobileLinks = links.filter((item) => item.to !== "/");
+
 export default function Layout() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -119,7 +121,7 @@ export default function Layout() {
               />
             </form>
             <nav>
-              {links.map((item) => (
+              {mobileLinks.map((item) => (
                 <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setMenuOpen(false)}>
                   {item.label}
                 </NavLink>
