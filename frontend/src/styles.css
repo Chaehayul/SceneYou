@@ -1147,10 +1147,12 @@ select { cursor: pointer; }
   .filter-search { width: 100%; min-width: 0; }
   .filter-controls select { width: 100%; }
   .filter-label { display: none; }
-  .detail-hero { min-height: 670px; }
-  .detail-layout { grid-template-columns: 105px 1fr; gap: 18px; padding-top: 170px; }
+  .detail-hero { min-height: auto; }
+  .detail-layout { grid-template-columns: 1fr; gap: 18px; align-items: start; padding-top: 120px; padding-bottom: 44px; }
+  .detail-poster { width: min(132px, 42vw); }
   .detail-copy h1 { font-size: 32px; }
-  .detail-copy .tagline, .detail-copy .overview, .detail-copy .tag-row { display: none; }
+  .detail-copy .tagline, .detail-copy .tag-row { display: none; }
+  .detail-copy .overview { display: block; margin: 14px 0 18px; font-size: 14px; line-height: 1.7; }
   .detail-copy .hero-actions { align-items: stretch; flex-direction: column; }
   .form-row { grid-template-columns: 1fr; }
   .panel { padding: 19px; }
